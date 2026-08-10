@@ -14,8 +14,10 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Building2,
   BriefcaseBusiness,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   ClipboardList,
   Crown,
   Download,
@@ -159,6 +161,16 @@ const ENTITY_META: Record<EntityType, { label: string; icon: React.ElementType; 
     icon: ClipboardList,
     className: 'from-fuchsia-500 to-violet-500 border-fuchsia-400/30',
   },
+};
+
+// Explicit hierarchy order for the swimlane rows: Empresas -> Proyectos -> Licitaciones -> Tareas.
+const LEVEL_ORDER: EntityType[] = ['empresa', 'proyecto', 'licitacion', 'tarea'];
+
+const LEVEL_META: Record<EntityType, { title: string; noun: string; bg: string; border: string; text: string }> = {
+  empresa: { title: 'Nivel 1 · Empresas', noun: 'empresas', bg: 'bg-blue-100 dark:bg-blue-950/60', border: 'border-blue-300 dark:border-blue-800', text: 'text-blue-800 dark:text-blue-300' },
+  proyecto: { title: 'Nivel 2 · Proyectos', noun: 'proyectos', bg: 'bg-emerald-100 dark:bg-emerald-950/60', border: 'border-emerald-300 dark:border-emerald-800', text: 'text-emerald-800 dark:text-emerald-300' },
+  licitacion: { title: 'Nivel 3 · Licitaciones', noun: 'licitaciones', bg: 'bg-orange-100 dark:bg-orange-950/60', border: 'border-orange-300 dark:border-orange-800', text: 'text-orange-800 dark:text-orange-300' },
+  tarea: { title: 'Nivel 4 · Tareas', noun: 'tareas', bg: 'bg-purple-100 dark:bg-purple-950/60', border: 'border-purple-300 dark:border-purple-800', text: 'text-purple-800 dark:text-purple-300' },
 };
 
 const ROLE_BADGES: Record<RoleType, { bg: string; border: string; text: string; dot: string }> = {
@@ -703,7 +715,7 @@ function EntityColumn({
     <section
       ref={setNodeRef}
       style={columnStyle}
-      className={`flex h-[620px] flex-col overflow-hidden rounded-2xl border-2 bg-slate-900/45 backdrop-blur-md transition-all ${
+      className={`flex h-[440px] flex-col overflow-hidden rounded-2xl border-2 bg-slate-900/45 backdrop-blur-md transition-all ${
         fitMode ? 'w-full min-w-0' : 'w-[340px] min-w-[340px] snap-start'
       } ${isColumnDragging ? 'opacity-40' : 'opacity-100'} ${isOver ? 'border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.22)]' : 'border-slate-800/80'}`}
     >
@@ -840,7 +852,7 @@ function BankColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`z-30 flex h-[620px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 bg-slate-950/80 backdrop-blur-md transition-all ${
+      className={`z-30 flex h-[440px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 bg-slate-950/80 backdrop-blur-md transition-all ${
         collapsed ? 'w-[56px] min-w-[56px]' : `min-w-[300px] w-[300px] ${dense ? '' : 'snap-start'}`
       } ${isOver ? 'border-red-400 shadow-[0_0_24px_rgba(248,113,113,0.24)]' : 'border-slate-800'}`}
     >
@@ -953,7 +965,7 @@ function HoldingColumn({
 
   return (
     <section
-      className={`holding-column z-30 flex h-[620px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-slate-950/85 shadow-[0_0_24px_rgba(245,158,11,0.16)] backdrop-blur-md ${
+      className={`holding-column z-30 flex h-[440px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-slate-950/85 shadow-[0_0_24px_rgba(245,158,11,0.16)] backdrop-blur-md ${
         fitMode ? 'w-[260px] min-w-[260px]' : 'w-[320px] min-w-[320px] snap-start'
       }`}
     >
@@ -996,6 +1008,12 @@ export default function App() {
   const [compactMode, setCompactMode] = useState(false);
   const [fitToScreen, setFitToScreen] = useState(false);
   const [bankCollapsed, setBankCollapsed] = useState(false);
+  const [collapsedLevels, setCollapsedLevels] = useState<Record<EntityType, boolean>>({
+    empresa: false,
+    proyecto: false,
+    licitacion: false,
+    tarea: false,
+  });
   const [connectionMode, setConnectionMode] = useState(false);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
   const [selectedConnectionPersonId, setSelectedConnectionPersonId] = useState<string | null>(null);
@@ -1094,6 +1112,16 @@ export default function App() {
   const visibleEntities = useMemo(() => {
     return orderedEntities.filter((entity) => entityTypeFilter === 'todos' || entity.type === entityTypeFilter);
   }, [entityTypeFilter, orderedEntities]);
+
+  // Groups the visible entities into their hierarchy swimlane, preserving the
+  // per-type relative order stored in entitiesOrder.
+  const entitiesByLevel = useMemo(() => {
+    const grouped: Record<EntityType, BoardEntity[]> = { empresa: [], proyecto: [], licitacion: [], tarea: [] };
+    visibleEntities.forEach((entity) => {
+      grouped[entity.type].push(entity);
+    });
+    return grouped;
+  }, [visibleEntities]);
 
   const filteredPersonIds = useMemo(() => new Set(filteredPeople.map((person) => person.id)), [filteredPeople]);
 
@@ -1210,7 +1238,11 @@ export default function App() {
       window.removeEventListener('scroll', handleRefresh, true);
       observer.disconnect();
     };
-  }, [bankCollapsed, board.assignments, filteredPeople, fitToScreen, refreshConnectionLines, visibleEntities]);
+  }, [bankCollapsed, board.assignments, collapsedLevels, filteredPeople, fitToScreen, refreshConnectionLines, visibleEntities]);
+
+  const toggleLevelCollapsed = (type: EntityType) => {
+    setCollapsedLevels((prev) => ({ ...prev, [type]: !prev[type] }));
+  };
 
   const openNewPersonModal = () => {
     setEditingPersonId(null);
@@ -1436,8 +1468,14 @@ export default function App() {
     return true;
   };
 
+  // Reordering only makes sense within the same hierarchy row (same entity type) —
+  // a company card can't jump into the projects row by being dropped on it.
   const reorderEntity = (sourceEntityId: string, targetEntityId: string) => {
     if (sourceEntityId === targetEntityId) return false;
+
+    const sourceEntity = board.entities.find((entity) => entity.id === sourceEntityId);
+    const targetEntity = board.entities.find((entity) => entity.id === targetEntityId);
+    if (!sourceEntity || !targetEntity || sourceEntity.type !== targetEntity.type) return false;
 
     const currentOrder = [
       ...board.entitiesOrder.filter((entityId) => board.entities.some((entity) => entity.id === entityId)),
@@ -1455,14 +1493,23 @@ export default function App() {
   };
 
   const handleMoveEntity = (entityId: string, direction: 'left' | 'right') => {
-    const currentOrder = orderedEntities.map((entity) => entity.id);
-    const currentIndex = currentOrder.indexOf(entityId);
-    const targetIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
-    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= currentOrder.length) return;
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    if (!entity) return;
 
-    const nextOrder = [...currentOrder];
-    [nextOrder[currentIndex], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[currentIndex]];
-    setBoard((prev) => ({ ...prev, entitiesOrder: nextOrder }));
+    // Move within the entities of the same row/type only, keeping other rows untouched.
+    const sameLevelOrder = orderedEntities.filter((candidate) => candidate.type === entity.type).map((candidate) => candidate.id);
+    const currentIndex = sameLevelOrder.indexOf(entityId);
+    const targetIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= sameLevelOrder.length) return;
+
+    const swapTargetId = sameLevelOrder[targetIndex];
+    const globalOrder = [...board.entitiesOrder];
+    const globalCurrentIndex = globalOrder.indexOf(entityId);
+    const globalSwapIndex = globalOrder.indexOf(swapTargetId);
+    if (globalCurrentIndex < 0 || globalSwapIndex < 0) return;
+
+    [globalOrder[globalCurrentIndex], globalOrder[globalSwapIndex]] = [globalOrder[globalSwapIndex], globalOrder[globalCurrentIndex]];
+    setBoard((prev) => ({ ...prev, entitiesOrder: globalOrder }));
     showToast('Orden de columnas actualizado.', 'success');
   };
 
@@ -1836,91 +1883,135 @@ export default function App() {
 
       <main className={fitToScreen ? 'w-full px-3 py-5' : 'mx-auto max-w-[1800px] px-4 py-5 lg:px-6'}>
         <div className="mb-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-4 text-xs leading-relaxed text-slate-400">
-          <strong className="text-slate-200">Estructura horizontal:</strong> las columnas viven en el mismo nivel. Arrastra personas desde el banco o desde otra columna para copiarlas, agrega tareas por contexto y usa el modo conexión para dibujar quién reporta a quién.
+          <strong className="text-slate-200">Estructura jerárquica:</strong> la Cúpula Directiva y el Banco quedan fijos arriba; debajo, cada nivel (Empresas → Proyectos → Licitaciones → Tareas) tiene su propia fila. Arrastra personas entre cualquier tarjeta, reordena columnas dentro de su fila y colapsa niveles con la flecha para enfocar la vista.
         </div>
 
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className={fitToScreen ? 'overflow-x-hidden pb-5' : 'overflow-x-auto pb-5'}>
-            <div
-              ref={boardContentRef}
-              className={`relative flex gap-4 pb-3 ${fitToScreen ? 'w-full' : 'min-w-max snap-x'}`}
-            >
-              <svg className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible">
-                <defs>
-                  <marker id="arrow-head" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
-                    <path d="M 0 0 L 8 4 L 0 8 z" fill={connectionColor} />
-                  </marker>
-                </defs>
-                {connectionLines.map((line) => {
-                  const midX = (line.x1 + line.x2) / 2;
-                  const midY = (line.y1 + line.y2) / 2;
-                  const curve = Math.max(80, Math.abs(line.x2 - line.x1) / 2);
-
-                  return (
-                    <g key={line.id}>
-                      <path
-                        d={`M ${line.x1} ${line.y1} C ${line.x1 + curve} ${line.y1}, ${line.x2 - curve} ${line.y2}, ${line.x2} ${line.y2}`}
-                        fill="none"
-                        markerEnd="url(#arrow-head)"
-                        stroke={connectionColor}
-                        strokeDasharray="7 7"
-                        strokeLinecap="round"
-                        strokeWidth="2"
-                      />
-                      <text x={midX} y={midY - 8} fill={connectionTextColor} fontSize="11" fontWeight="700" textAnchor="middle">
-                        {line.label}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
-
-              <HoldingColumn members={board.holdingMembers} fitMode={fitToScreen} readOnly={isPresentationMode} onEditMember={openEditHoldingModal} />
-
-              <BankColumn
-                people={filteredPeople}
-                searchQuery={searchQuery}
-                compact={compactMode}
-                dense={fitToScreen}
-                collapsed={bankCollapsed}
-                readOnly={isPresentationMode}
-                selectedConnectionPersonId={selectedConnectionPersonId}
-                connectionMode={connectionMode}
-                onToggleCollapsed={() => setBankCollapsed((prev) => !prev)}
-                onOpenPerson={(nextPerson) => setSelectedPersonId(nextPerson.id)}
-                onConnect={handleConnectPerson}
-              />
-
-              {visibleEntities.map((entity, entityIndex) => {
-                const assignments = board.assignments.filter(
-                  (assignment) => assignment.entityId === entity.id && filteredPersonIds.has(assignment.personId)
-                );
+          <div ref={boardContentRef} className="relative flex flex-col gap-5 pb-5">
+            <svg className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible">
+              <defs>
+                <marker id="arrow-head" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
+                  <path d="M 0 0 L 8 4 L 0 8 z" fill={connectionColor} />
+                </marker>
+              </defs>
+              {connectionLines.map((line) => {
+                const midX = (line.x1 + line.x2) / 2;
+                const midY = (line.y1 + line.y2) / 2;
+                const curve = Math.max(80, Math.abs(line.x2 - line.x1) / 2);
 
                 return (
-                  <div key={entity.id} className={fitToScreen ? 'z-30 min-w-0 flex-1' : 'z-30'}>
-                    <EntityColumn
-                      entity={entity}
-                      assignments={assignments}
-                      people={board.people}
-                      searchQuery={searchQuery}
-                      compact={compactMode}
-                      fitMode={fitToScreen}
-                      selectedConnectionPersonId={selectedConnectionPersonId}
-                      connectionMode={connectionMode}
-                      readOnly={isPresentationMode}
-                      canMoveLeft={entityIndex > 0}
-                      canMoveRight={entityIndex < visibleEntities.length - 1}
-                      onOpenPerson={(person) => setSelectedPersonId(person.id)}
-                      onConnect={handleConnectPerson}
-                      onEditEntity={openEditEntityModal}
-                      onDeleteEntity={(entityToDelete) => handleDeleteEntity(entityToDelete.id)}
-                      onRemoveAssignment={handleRemoveAssignment}
-                      onMoveEntity={handleMoveEntity}
+                  <g key={line.id}>
+                    <path
+                      d={`M ${line.x1} ${line.y1} C ${line.x1 + curve} ${line.y1}, ${line.x2 - curve} ${line.y2}, ${line.x2} ${line.y2}`}
+                      fill="none"
+                      markerEnd="url(#arrow-head)"
+                      stroke={connectionColor}
+                      strokeDasharray="7 7"
+                      strokeLinecap="round"
+                      strokeWidth="2"
                     />
-                  </div>
+                    <text x={midX} y={midY - 8} fill={connectionTextColor} fontSize="11" fontWeight="700" textAnchor="middle">
+                      {line.label}
+                    </text>
+                  </g>
                 );
               })}
+            </svg>
+
+            {/* Fila fija superior: Cúpula Directiva + Banco de Personas */}
+            <div className={fitToScreen ? 'overflow-x-hidden' : 'overflow-x-auto pb-1'}>
+              <div className={`relative z-30 flex gap-4 ${fitToScreen ? 'w-full' : 'min-w-max snap-x'}`}>
+                <HoldingColumn members={board.holdingMembers} fitMode={fitToScreen} readOnly={isPresentationMode} onEditMember={openEditHoldingModal} />
+
+                <BankColumn
+                  people={filteredPeople}
+                  searchQuery={searchQuery}
+                  compact={compactMode}
+                  dense={fitToScreen}
+                  collapsed={bankCollapsed}
+                  readOnly={isPresentationMode}
+                  selectedConnectionPersonId={selectedConnectionPersonId}
+                  connectionMode={connectionMode}
+                  onToggleCollapsed={() => setBankCollapsed((prev) => !prev)}
+                  onOpenPerson={(nextPerson) => setSelectedPersonId(nextPerson.id)}
+                  onConnect={handleConnectPerson}
+                />
+              </div>
             </div>
+
+            {/* Niveles jerárquicos: Empresas -> Proyectos -> Licitaciones -> Tareas */}
+            {LEVEL_ORDER.filter((levelType) => entityTypeFilter === 'todos' || entityTypeFilter === levelType).map((levelType) => {
+              const levelEntities = entitiesByLevel[levelType];
+              const levelMeta = LEVEL_META[levelType];
+              const LevelIcon = ENTITY_META[levelType].icon;
+              const isCollapsed = collapsedLevels[levelType];
+
+              return (
+                <section key={levelType} className="relative z-30 rounded-2xl border border-slate-800/70 bg-slate-900/25 p-3">
+                  <header className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider ${levelMeta.bg} ${levelMeta.border} ${levelMeta.text}`}>
+                        <LevelIcon className="h-3.5 w-3.5" />
+                        {levelMeta.title}
+                      </span>
+                      <span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-[10px] font-bold text-slate-400">
+                        {levelEntities.length}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleLevelCollapsed(levelType)}
+                      className="shrink-0 rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200"
+                      title={isCollapsed ? `Expandir ${levelMeta.noun}` : `Colapsar ${levelMeta.noun}`}
+                    >
+                      {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                    </button>
+                  </header>
+
+                  {!isCollapsed && (
+                    levelEntities.length === 0 ? (
+                      <div className="flex h-20 items-center justify-center rounded-xl border border-dashed border-slate-800 text-xs text-slate-500">
+                        Sin {levelMeta.noun} registradas todavía.
+                      </div>
+                    ) : (
+                      <div className={fitToScreen ? 'overflow-x-hidden' : 'overflow-x-auto pb-1'}>
+                        <div className={`flex gap-4 ${fitToScreen ? 'w-full' : 'min-w-max snap-x'}`}>
+                          {levelEntities.map((entity, entityIndex) => {
+                            const assignments = board.assignments.filter(
+                              (assignment) => assignment.entityId === entity.id && filteredPersonIds.has(assignment.personId)
+                            );
+
+                            return (
+                              <div key={entity.id} className={fitToScreen ? 'min-w-0 flex-1' : ''}>
+                                <EntityColumn
+                                  entity={entity}
+                                  assignments={assignments}
+                                  people={board.people}
+                                  searchQuery={searchQuery}
+                                  compact={compactMode}
+                                  fitMode={fitToScreen}
+                                  selectedConnectionPersonId={selectedConnectionPersonId}
+                                  connectionMode={connectionMode}
+                                  readOnly={isPresentationMode}
+                                  canMoveLeft={entityIndex > 0}
+                                  canMoveRight={entityIndex < levelEntities.length - 1}
+                                  onOpenPerson={(person) => setSelectedPersonId(person.id)}
+                                  onConnect={handleConnectPerson}
+                                  onEditEntity={openEditEntityModal}
+                                  onDeleteEntity={(entityToDelete) => handleDeleteEntity(entityToDelete.id)}
+                                  onRemoveAssignment={handleRemoveAssignment}
+                                  onMoveEntity={handleMoveEntity}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </section>
+              );
+            })}
           </div>
 
           <DragOverlay dropAnimation={null}>
