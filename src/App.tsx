@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Crown,
   Download,
   Edit2,
   Filter,
@@ -137,19 +138,19 @@ const ENTITY_META: Record<EntityType, { label: string; icon: React.ElementType; 
 };
 
 const ROLE_BADGES: Record<RoleType, { bg: string; border: string; text: string; dot: string }> = {
-  Management: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-300', dot: 'bg-emerald-300' },
-  Administrativo: { bg: 'bg-sky-500/10', border: 'border-sky-500/30', text: 'text-sky-300', dot: 'bg-sky-300' },
-  Operativo: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-300', dot: 'bg-amber-300' },
-  Arquitectura: { bg: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/30', text: 'text-fuchsia-300', dot: 'bg-fuchsia-300' },
-  Externo: { bg: 'bg-stone-500/10', border: 'border-stone-500/30', text: 'text-stone-300', dot: 'bg-stone-300' },
-  Asesor: { bg: 'bg-teal-500/10', border: 'border-teal-500/30', text: 'text-teal-300', dot: 'bg-teal-300' },
-  Finanzas: { bg: 'bg-lime-500/10', border: 'border-lime-500/30', text: 'text-lime-300', dot: 'bg-lime-300' },
-  RRHH: { bg: 'bg-rose-500/10', border: 'border-rose-500/30', text: 'text-rose-300', dot: 'bg-rose-300' },
-  Legal: { bg: 'bg-violet-500/10', border: 'border-violet-500/30', text: 'text-violet-300', dot: 'bg-violet-300' },
-  Marketing: { bg: 'bg-pink-500/10', border: 'border-pink-500/30', text: 'text-pink-300', dot: 'bg-pink-300' },
-  Ventas: { bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', text: 'text-cyan-300', dot: 'bg-cyan-300' },
-  Logística: { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-300', dot: 'bg-orange-300' },
-  Tecnología: { bg: 'bg-indigo-500/10', border: 'border-indigo-500/30', text: 'text-indigo-300', dot: 'bg-indigo-300' },
+  Management: { bg: 'bg-blue-100 dark:bg-blue-900/80', border: 'border-blue-300 dark:border-blue-700', text: 'text-blue-800 dark:text-blue-200', dot: 'bg-blue-700 dark:bg-blue-300' },
+  Administrativo: { bg: 'bg-emerald-100 dark:bg-emerald-900/80', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-800 dark:text-emerald-200', dot: 'bg-emerald-700 dark:bg-emerald-300' },
+  Operativo: { bg: 'bg-amber-100 dark:bg-amber-900/80', border: 'border-amber-300 dark:border-amber-700', text: 'text-amber-800 dark:text-amber-200', dot: 'bg-amber-700 dark:bg-amber-300' },
+  Arquitectura: { bg: 'bg-purple-100 dark:bg-purple-900/80', border: 'border-purple-300 dark:border-purple-700', text: 'text-purple-800 dark:text-purple-200', dot: 'bg-purple-700 dark:bg-purple-300' },
+  Externo: { bg: 'bg-gray-100 dark:bg-gray-800', border: 'border-gray-300 dark:border-gray-600', text: 'text-gray-800 dark:text-gray-200', dot: 'bg-gray-700 dark:bg-gray-300' },
+  Asesor: { bg: 'bg-indigo-100 dark:bg-indigo-900/80', border: 'border-indigo-300 dark:border-indigo-700', text: 'text-indigo-800 dark:text-indigo-200', dot: 'bg-indigo-700 dark:bg-indigo-300' },
+  Finanzas: { bg: 'bg-lime-100 dark:bg-lime-900/80', border: 'border-lime-300 dark:border-lime-700', text: 'text-lime-800 dark:text-lime-200', dot: 'bg-lime-700 dark:bg-lime-300' },
+  RRHH: { bg: 'bg-rose-100 dark:bg-rose-900/80', border: 'border-rose-300 dark:border-rose-700', text: 'text-rose-800 dark:text-rose-200', dot: 'bg-rose-700 dark:bg-rose-300' },
+  Legal: { bg: 'bg-violet-100 dark:bg-violet-900/80', border: 'border-violet-300 dark:border-violet-700', text: 'text-violet-800 dark:text-violet-200', dot: 'bg-violet-700 dark:bg-violet-300' },
+  Marketing: { bg: 'bg-pink-100 dark:bg-pink-900/80', border: 'border-pink-300 dark:border-pink-700', text: 'text-pink-800 dark:text-pink-200', dot: 'bg-pink-700 dark:bg-pink-300' },
+  Ventas: { bg: 'bg-cyan-100 dark:bg-cyan-900/80', border: 'border-cyan-300 dark:border-cyan-700', text: 'text-cyan-800 dark:text-cyan-200', dot: 'bg-cyan-700 dark:bg-cyan-300' },
+  Logística: { bg: 'bg-orange-100 dark:bg-orange-900/80', border: 'border-orange-300 dark:border-orange-700', text: 'text-orange-800 dark:text-orange-200', dot: 'bg-orange-700 dark:bg-orange-300' },
+  Tecnología: { bg: 'bg-sky-100 dark:bg-sky-900/80', border: 'border-sky-300 dark:border-sky-700', text: 'text-sky-800 dark:text-sky-200', dot: 'bg-sky-700 dark:bg-sky-300' },
 };
 
 const ROLE_OPTIONS = Object.keys(ROLE_BADGES) as RoleType[];
@@ -564,6 +565,65 @@ function EntityColumn({
   );
 }
 
+function HoldingColumn({ fitMode }: { fitMode: boolean }) {
+  return (
+    <section
+      className={`holding-column z-30 flex h-[620px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-slate-950/85 shadow-[0_0_24px_rgba(245,158,11,0.16)] backdrop-blur-md ${
+        fitMode ? 'w-[260px] min-w-[260px]' : 'w-[320px] min-w-[320px] snap-start'
+      }`}
+    >
+      <header className={`border-b border-amber-400/30 bg-gradient-to-r from-amber-500 to-yellow-500 ${fitMode ? 'p-2.5' : 'p-4'}`}>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-950/35 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+          <Crown className="h-3 w-3" />
+          Directorio / Holding
+        </span>
+        <h3 className={`mt-2 font-display font-extrabold leading-tight text-white ${fitMode ? 'text-sm' : 'text-lg'}`}>Cúpula directiva</h3>
+        {!fitMode && <p className="mt-1 text-xs leading-relaxed text-white/85">Referencia fija para decisiones, reportes y dirección del grupo.</p>}
+      </header>
+
+      <div className={`relative flex flex-1 flex-col ${fitMode ? 'p-2' : 'p-4'}`}>
+        <div className="absolute left-1/2 top-[96px] h-[118px] w-0.5 -translate-x-1/2 bg-amber-400/70" />
+
+        <div className="holding-card relative z-10 rounded-xl border border-amber-300/50 bg-slate-900/80 p-3 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-amber-400 p-2 text-slate-950">
+              <Crown className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300">Nivel 0</span>
+              <h4 className="mt-1 font-display text-sm font-extrabold leading-tight text-slate-900 dark:text-white">Damir Solar - Dueño</h4>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-slate-400">Radicado en el extranjero (10 meses al año).</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="z-10 mx-auto my-3 rounded-full border border-amber-300/50 bg-slate-950 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+          reporta / asesora
+        </div>
+
+        <div className="holding-card relative z-10 rounded-xl border border-cyan-300/50 bg-slate-900/80 p-3 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-cyan-400 p-2 text-slate-950">
+              <User className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">Nivel 1</span>
+              <h4 className="mt-1 font-display text-sm font-extrabold leading-tight text-slate-900 dark:text-white">Rafael Valenzuela Munita - Asesor Financiero y del Directorio</h4>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-slate-400">Nexo principal para la toma de decisiones del Holding.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-cyan-400/40 bg-slate-900/45 p-3 text-center">
+          <Network className="mb-2 h-5 w-5 text-cyan-700 dark:text-cyan-300" />
+          <p className="text-xs font-bold text-slate-900 dark:text-slate-200">Las entidades del tablero reportan operativamente a Rafael.</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-slate-500">La estructura sigue horizontal; esta columna solo fija la referencia de decisión.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
   const [board, setBoard] = useState<BoardState>(loadState);
   const [theme, setTheme] = useState<ThemeMode>(loadTheme);
@@ -616,6 +676,7 @@ export default function App() {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     document.documentElement.dataset.theme = theme;
     document.body.dataset.theme = theme;
+    document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
   const selectedPerson = useMemo(
@@ -1270,6 +1331,8 @@ export default function App() {
                   );
                 })}
               </svg>
+
+              <HoldingColumn fitMode={fitToScreen} />
 
               <section
                 className={`z-30 flex h-[620px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-slate-800 bg-slate-950/80 backdrop-blur-md transition-all ${

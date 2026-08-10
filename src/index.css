@@ -72,6 +72,11 @@ body[data-theme='dark'] {
   background-color: rgba(255, 255, 255, 0.9) !important;
 }
 
+.theme-light [class*="bg-gradient-to-r"] [class*="bg-slate-950"],
+.theme-light [class*="bg-gradient-to-r"] [class*="bg-slate-900"] {
+  background-color: rgba(15, 23, 42, 0.42) !important;
+}
+
 .theme-light [class*="border-slate-800"],
 .theme-light [class*="border-slate-700"] {
   border-color: #cbd5e1 !important;
@@ -110,6 +115,28 @@ body[data-theme='dark'] {
 .theme-light mark {
   background: rgba(251, 191, 36, 0.35);
   color: #713f12;
+}
+
+.theme-light [data-person-id] {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.theme-light [data-person-id]:hover {
+  border-color: #94a3b8 !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.theme-light .holding-column {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(245, 158, 11, 0.68) !important;
+}
+
+.theme-light .holding-card {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .theme-light .text-emerald-300 { color: #047857 !important; }
