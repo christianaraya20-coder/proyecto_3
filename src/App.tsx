@@ -15,15 +15,18 @@ import {
   Building2,
   BriefcaseBusiness,
   ClipboardList,
+  Download,
   Edit2,
   Filter,
   Gavel,
+  GripVertical,
   Layers3,
   Link2,
   Network,
   Plus,
   Search,
   Trash2,
+  Upload,
   User,
   Users,
   X,
@@ -192,19 +195,25 @@ function normalizeText(value: string) {
   return value.trim().toLowerCase();
 }
 
+function isValidBoardState(value: unknown): value is BoardState {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<BoardState>;
+  return (
+    Array.isArray(candidate.people) &&
+    Array.isArray(candidate.entities) &&
+    Array.isArray(candidate.assignments) &&
+    Array.isArray(candidate.connections)
+  );
+}
+
 function loadState(): BoardState {
   if (typeof window === 'undefined') return INITIAL_STATE;
 
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored) as BoardState;
-      if (
-        Array.isArray(parsed.people) &&
-        Array.isArray(parsed.entities) &&
-        Array.isArray(parsed.assignments) &&
-        Array.isArray(parsed.connections)
-      ) {
+      const parsed = JSON.parse(stored);
+      if (isValidBoardState(parsed)) {
         return parsed;
       }
     }
@@ -307,14 +316,12 @@ function PersonCard({
       ref={setNodeRef}
       style={style}
       data-person-id={person.id}
-      {...listeners}
-      {...attributes}
       onClick={() => onOpen(person)}
       className={`group rounded-xl border p-3 transition-all duration-200 ${
         selected
           ? 'border-amber-400 bg-amber-950/30 shadow-[0_0_16px_rgba(251,191,36,0.18)]'
           : 'border-slate-800 bg-slate-900/75 hover:border-slate-700 hover:bg-slate-900'
-      } ${isDragging ? 'opacity-30' : 'opacity-100'} cursor-grab active:cursor-grabbing`}
+      } ${isDragging ? 'opacity-30' : 'opacity-100'} cursor-pointer`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -323,6 +330,16 @@ function PersonCard({
           </h4>
           {!compact && <p className="mt-1 text-[11px] font-medium text-slate-500">{person.category}</p>}
         </div>
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          onClick={(event) => event.stopPropagation()}
+          className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
+          title="Arrastrar persona"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
         {connectionMode && (
           <button
             type="button"
@@ -381,14 +398,12 @@ function AssignmentCard({
       ref={setNodeRef}
       style={style}
       data-person-id={person.id}
-      {...listeners}
-      {...attributes}
       onClick={() => onOpen(person)}
       className={`group rounded-xl border p-3 transition-all duration-200 ${
         selected
           ? 'border-amber-400 bg-amber-950/30 shadow-[0_0_16px_rgba(251,191,36,0.18)]'
           : 'border-slate-800 bg-slate-900/70 hover:border-slate-700 hover:bg-slate-900'
-      } ${isDragging ? 'opacity-30' : 'opacity-100'} cursor-grab active:cursor-grabbing`}
+      } ${isDragging ? 'opacity-30' : 'opacity-100'} cursor-pointer`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -397,6 +412,16 @@ function AssignmentCard({
           </h4>
           {!compact && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{assignment.taskText || 'Sin función específica registrada.'}</p>}
         </div>
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          onClick={(event) => event.stopPropagation()}
+          className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
+          title="Arrastrar asignación"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
         {connectionMode && (
           <button
             type="button"
@@ -434,6 +459,7 @@ function EntityColumn({
   connectionMode,
   onOpenPerson,
   onConnect,
+  onEditEntity,
 }: {
   entity: BoardEntity;
   assignments: Assignment[];
@@ -444,6 +470,7 @@ function EntityColumn({
   connectionMode: boolean;
   onOpenPerson: (person: Person) => void;
   onConnect: (person: Person) => void;
+  onEditEntity: (entity: BoardEntity) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `entity:${entity.id}` });
   const meta = ENTITY_META[entity.type];
@@ -466,7 +493,17 @@ function EntityColumn({
             <h3 className="mt-2 break-words font-display text-lg font-extrabold leading-tight text-white">{entity.name}</h3>
             <p className="mt-1 line-clamp-2 min-h-[32px] text-xs leading-relaxed text-white/80">{entity.description}</p>
           </div>
-          <span className="rounded-full border border-white/20 bg-slate-950/35 px-2 py-0.5 text-xs font-bold text-white">{assignments.length}</span>
+          <div className="flex flex-col items-end gap-2">
+            <span className="rounded-full border border-white/20 bg-slate-950/35 px-2 py-0.5 text-xs font-bold text-white">{assignments.length}</span>
+            <button
+              type="button"
+              onClick={() => onEditEntity(entity)}
+              className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white"
+              title="Editar entidad"
+            >
+              <Edit2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -515,10 +552,13 @@ export default function App() {
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false);
   const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
+  const [editingEntityId, setEditingEntityId] = useState<string | null>(null);
+  const [manualAssignEntityId, setManualAssignEntityId] = useState('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [connectionLines, setConnectionLines] = useState<ConnectionLine[]>([]);
 
   const boardContentRef = useRef<HTMLDivElement | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const [personForm, setPersonForm] = useState({
     name: '',
@@ -591,6 +631,56 @@ export default function App() {
     window.setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, 3000);
+  };
+
+  const handleExportBoard = () => {
+    const dataStr = JSON.stringify(board, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tablero-organigrama-${timestamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast('Tablero exportado como archivo JSON.', 'success');
+  };
+
+  const handleImportClick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(String(reader.result));
+      } catch {
+        showToast('El archivo no contiene un JSON válido.', 'warning');
+        return;
+      }
+
+      if (!isValidBoardState(parsed)) {
+        showToast('El JSON no tiene la estructura esperada del tablero.', 'warning');
+        return;
+      }
+
+      if (!window.confirm('Importar reemplazará todos los datos actuales del tablero. ¿Continuar?')) return;
+
+      setBoard(parsed);
+      setSelectedPersonId(null);
+      setSelectedConnectionPersonId(null);
+      showToast('Tablero importado correctamente.', 'success');
+    };
+    reader.onerror = () => showToast('No se pudo leer el archivo seleccionado.', 'warning');
+    reader.readAsText(file);
   };
 
   const refreshConnectionLines = useCallback(() => {
@@ -687,9 +777,45 @@ export default function App() {
     setIsPersonModalOpen(false);
   };
 
+  const openNewEntityModal = () => {
+    setEditingEntityId(null);
+    setEntityForm({ name: '', type: 'empresa', description: '' });
+    setIsEntityModalOpen(true);
+  };
+
+  const openEditEntityModal = (entity: BoardEntity) => {
+    setEditingEntityId(entity.id);
+    setEntityForm({
+      name: entity.name,
+      type: entity.type,
+      description: entity.description,
+    });
+    setIsEntityModalOpen(true);
+  };
+
   const handleSaveEntity = (event: React.FormEvent) => {
     event.preventDefault();
     if (!entityForm.name.trim()) return;
+
+    if (editingEntityId) {
+      setBoard((prev) => ({
+        ...prev,
+        entities: prev.entities.map((entity) =>
+          entity.id === editingEntityId
+            ? {
+                ...entity,
+                name: entityForm.name.trim(),
+                type: entityForm.type,
+                description: entityForm.description.trim() || 'Columna horizontal de trabajo.',
+              }
+            : entity
+        ),
+      }));
+      setEditingEntityId(null);
+      setIsEntityModalOpen(false);
+      showToast('Entidad actualizada.', 'success');
+      return;
+    }
 
     const entity: BoardEntity = {
       id: createId('entity'),
@@ -722,6 +848,32 @@ export default function App() {
     showToast(`${person.name} eliminado definitivamente.`, 'warning');
   };
 
+  const handleAssignPersonToEntity = (personId: string, entityId: string) => {
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    const person = board.people.find((candidate) => candidate.id === personId);
+    if (!entity || !person) return false;
+
+    const alreadyAssigned = board.assignments.some(
+      (assignment) => assignment.personId === personId && assignment.entityId === entityId
+    );
+
+    if (alreadyAssigned) {
+      showToast(`${person.name} ya participa en ${entity.name}.`, 'info');
+      return false;
+    }
+
+    const assignment: Assignment = {
+      id: createId('assign'),
+      personId,
+      entityId,
+      taskText: '',
+    };
+
+    setBoard((prev) => ({ ...prev, assignments: [...prev.assignments, assignment] }));
+    showToast(`${person.name} copiado a ${entity.name}.`, 'success');
+    return true;
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const personId = event.active.data.current?.personId as string | undefined;
     setActivePersonId(personId || null);
@@ -734,28 +886,7 @@ export default function App() {
 
     if (!personId || !targetEntityId) return;
 
-    const entity = board.entities.find((candidate) => candidate.id === targetEntityId);
-    const person = board.people.find((candidate) => candidate.id === personId);
-    if (!entity || !person) return;
-
-    const alreadyAssigned = board.assignments.some(
-      (assignment) => assignment.personId === personId && assignment.entityId === targetEntityId
-    );
-
-    if (alreadyAssigned) {
-      showToast(`${person.name} ya participa en ${entity.name}.`, 'info');
-      return;
-    }
-
-    const assignment: Assignment = {
-      id: createId('assign'),
-      personId,
-      entityId: targetEntityId,
-      taskText: '',
-    };
-
-    setBoard((prev) => ({ ...prev, assignments: [...prev.assignments, assignment] }));
-    showToast(`${person.name} copiado a ${entity.name}.`, 'success');
+    handleAssignPersonToEntity(personId, targetEntityId);
   };
 
   const handleConnectPerson = (person: Person) => {
@@ -822,15 +953,48 @@ export default function App() {
   const getPersonName = (personId: string) => board.people.find((person) => person.id === personId)?.name || 'Persona eliminada';
   const getEntityName = (entityId: string) => board.entities.find((entity) => entity.id === entityId)?.name || 'Entidad eliminada';
 
-  const selectedAssignments = selectedPerson
-    ? board.assignments.filter((assignment) => assignment.personId === selectedPerson.id)
-    : [];
-  const outgoingConnections = selectedPerson
-    ? board.connections.filter((connection) => connection.sourcePersonId === selectedPerson.id)
-    : [];
-  const incomingConnections = selectedPerson
-    ? board.connections.filter((connection) => connection.targetPersonId === selectedPerson.id)
-    : [];
+  const selectedAssignments = useMemo(
+    () =>
+      selectedPerson
+        ? board.assignments.filter((assignment) => assignment.personId === selectedPerson.id)
+        : [],
+    [board.assignments, selectedPerson]
+  );
+  const manualAssignableEntities = useMemo(
+    () =>
+      selectedPerson
+        ? board.entities.filter(
+            (entity) => !selectedAssignments.some((assignment) => assignment.entityId === entity.id)
+          )
+        : [],
+    [board.entities, selectedAssignments, selectedPerson]
+  );
+  const outgoingConnections = useMemo(
+    () =>
+      selectedPerson
+        ? board.connections.filter((connection) => connection.sourcePersonId === selectedPerson.id)
+        : [],
+    [board.connections, selectedPerson]
+  );
+  const incomingConnections = useMemo(
+    () =>
+      selectedPerson
+        ? board.connections.filter((connection) => connection.targetPersonId === selectedPerson.id)
+        : [],
+    [board.connections, selectedPerson]
+  );
+
+  useEffect(() => {
+    if (!selectedPerson) {
+      setManualAssignEntityId('');
+      return;
+    }
+
+    const stillAvailable = manualAssignableEntities.some((entity) => entity.id === manualAssignEntityId);
+    if (!stillAvailable) {
+      setManualAssignEntityId(manualAssignableEntities[0]?.id || '');
+    }
+  }, [manualAssignableEntities, manualAssignEntityId, selectedPerson]);
 
   return (
     <div className="min-h-screen overflow-hidden text-slate-100">
@@ -877,7 +1041,7 @@ export default function App() {
               </button>
               <button
                 type="button"
-                onClick={() => setIsEntityModalOpen(true)}
+                onClick={openNewEntityModal}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-md transition-colors hover:bg-emerald-500"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -906,6 +1070,31 @@ export default function App() {
                 <Layers3 className="h-3.5 w-3.5" />
                 {compactMode ? 'Expandida' : 'Compacta'}
               </button>
+              <button
+                type="button"
+                onClick={handleExportBoard}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                title="Descargar el tablero completo como archivo JSON"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Exportar JSON
+              </button>
+              <button
+                type="button"
+                onClick={handleImportClick}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                title="Cargar un archivo JSON exportado previamente"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Importar JSON
+              </button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json,.json"
+                onChange={handleImportFileChange}
+                className="hidden"
+              />
             </div>
           </div>
 
@@ -1062,6 +1251,7 @@ export default function App() {
                       connectionMode={connectionMode}
                       onOpenPerson={(person) => setSelectedPersonId(person.id)}
                       onConnect={handleConnectPerson}
+                      onEditEntity={openEditEntityModal}
                     />
                   </div>
                 );
@@ -1122,6 +1312,39 @@ export default function App() {
           </div>
 
           <div className="flex-1 space-y-5 overflow-y-auto p-5">
+            <section>
+              <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">Copiar a otra entidad</h3>
+              <div className="rounded-xl border border-slate-800 bg-slate-900/55 p-3">
+                {manualAssignableEntities.length === 0 ? (
+                  <p className="text-xs text-slate-500">Esta persona ya participa en todas las entidades disponibles.</p>
+                ) : (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <select
+                      value={manualAssignEntityId}
+                      onChange={(event) => setManualAssignEntityId(event.target.value)}
+                      className="min-w-0 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-200 outline-none focus:border-indigo-500"
+                    >
+                      {manualAssignableEntities.map((entity) => (
+                        <option key={entity.id} value={entity.id}>
+                          {entity.name} · {ENTITY_META[entity.type].label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!manualAssignEntityId) return;
+                        handleAssignPersonToEntity(selectedPerson.id, manualAssignEntityId);
+                      }}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-emerald-500"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Copiar
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
             <section>
               <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">Participación y funciones por entidad</h3>
               <div className="space-y-3">
@@ -1248,8 +1471,15 @@ export default function App() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <form onSubmit={handleSaveEntity} className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-display text-lg font-extrabold text-white">Agregar entidad horizontal</h2>
-              <button type="button" onClick={() => setIsEntityModalOpen(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white">
+              <h2 className="font-display text-lg font-extrabold text-white">{editingEntityId ? 'Editar entidad horizontal' : 'Agregar entidad horizontal'}</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingEntityId(null);
+                  setIsEntityModalOpen(false);
+                }}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1275,8 +1505,19 @@ export default function App() {
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={() => setIsEntityModalOpen(false)} className="rounded-xl border border-slate-800 px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white">Cancelar</button>
-              <button type="submit" className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500">Crear entidad</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingEntityId(null);
+                  setIsEntityModalOpen(false);
+                }}
+                className="rounded-xl border border-slate-800 px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500">
+                {editingEntityId ? 'Guardar cambios' : 'Crear entidad'}
+              </button>
             </div>
           </form>
         </div>
