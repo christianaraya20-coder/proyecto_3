@@ -30,6 +30,7 @@ import {
   Moon,
   Network,
   Plus,
+  Presentation,
   Search,
   Sun,
   Trash2,
@@ -333,6 +334,7 @@ function PersonCard({
   dense = false,
   selected = false,
   connectionMode = false,
+  readOnly = false,
   onOpen,
   onConnect,
 }: {
@@ -342,12 +344,14 @@ function PersonCard({
   dense?: boolean;
   selected?: boolean;
   connectionMode?: boolean;
+  readOnly?: boolean;
   onOpen: (person: Person) => void;
   onConnect: (person: Person) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `person:${person.id}`,
     data: { personId: person.id },
+    disabled: readOnly,
   });
 
   const style = transform ? { transform: CSS.Transform.toString(transform) } : undefined;
@@ -371,17 +375,19 @@ function PersonCard({
           </h4>
           {!compact && <p className="mt-1 text-[11px] font-medium text-slate-500">{person.category}</p>}
         </div>
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          onClick={(event) => event.stopPropagation()}
-          className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
-          title="Arrastrar persona"
-        >
-          <GripVertical className="h-3.5 w-3.5" />
-        </button>
-        {connectionMode && (
+        {!readOnly && (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            onClick={(event) => event.stopPropagation()}
+            className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
+            title="Arrastrar persona"
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {!readOnly && connectionMode && (
           <button
             type="button"
             onClick={(event) => {
@@ -416,6 +422,7 @@ function AssignmentCard({
   dense = false,
   selected,
   connectionMode,
+  readOnly = false,
   onOpen,
   onConnect,
 }: {
@@ -426,12 +433,14 @@ function AssignmentCard({
   dense?: boolean;
   selected: boolean;
   connectionMode: boolean;
+  readOnly?: boolean;
   onOpen: (person: Person) => void;
   onConnect: (person: Person) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `assignment:${assignment.id}`,
     data: { personId: person.id },
+    disabled: readOnly,
   });
 
   const style = transform ? { transform: CSS.Transform.toString(transform) } : undefined;
@@ -455,17 +464,19 @@ function AssignmentCard({
           </h4>
           {!compact && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{assignment.taskText || 'Sin función específica registrada.'}</p>}
         </div>
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          onClick={(event) => event.stopPropagation()}
-          className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
-          title="Arrastrar asignación"
-        >
-          <GripVertical className="h-3.5 w-3.5" />
-        </button>
-        {connectionMode && (
+        {!readOnly && (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            onClick={(event) => event.stopPropagation()}
+            className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
+            title="Arrastrar asignación"
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {!readOnly && connectionMode && (
           <button
             type="button"
             onClick={(event) => {
@@ -501,6 +512,7 @@ function EntityColumn({
   fitMode,
   selectedConnectionPersonId,
   connectionMode,
+  readOnly = false,
   onOpenPerson,
   onConnect,
   onEditEntity,
@@ -514,6 +526,7 @@ function EntityColumn({
   fitMode: boolean;
   selectedConnectionPersonId: string | null;
   connectionMode: boolean;
+  readOnly?: boolean;
   onOpenPerson: (person: Person) => void;
   onConnect: (person: Person) => void;
   onEditEntity: (entity: BoardEntity) => void;
@@ -546,24 +559,26 @@ function EntityColumn({
           </div>
           <div className="flex flex-col items-end gap-2">
             <span className={`rounded-full border border-white/20 bg-slate-950/35 font-bold text-white ${fitMode ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'}`}>{assignments.length}</span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => onEditEntity(entity)}
-                className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white"
-                title="Editar entidad"
-              >
-                <Edit2 className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onDeleteEntity(entity)}
-                className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:border-red-300/60 hover:bg-red-950/50 hover:text-red-200"
-                title="Eliminar entidad"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onEditEntity(entity)}
+                  className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white"
+                  title="Editar entidad"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDeleteEntity(entity)}
+                  className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:border-red-300/60 hover:bg-red-950/50 hover:text-red-200"
+                  title="Eliminar entidad"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -590,6 +605,7 @@ function EntityColumn({
                 dense={fitMode}
                 selected={selectedConnectionPersonId === person.id}
                 connectionMode={connectionMode}
+                readOnly={readOnly}
                 onOpen={onOpenPerson}
                 onConnect={onConnect}
               />
@@ -605,11 +621,13 @@ function HoldingCard({
   member,
   icon: Icon,
   accent,
+  readOnly = false,
   onEdit,
 }: {
   member: HoldingMember;
   icon: React.ElementType;
   accent: 'amber' | 'cyan';
+  readOnly?: boolean;
   onEdit: (member: HoldingMember) => void;
 }) {
   const accentClasses =
@@ -628,14 +646,16 @@ function HoldingCard({
             <span className={`text-[10px] font-extrabold uppercase tracking-wider ${accentClasses.label}`}>
               Nivel {member.level}
             </span>
-            <button
-              type="button"
-              onClick={() => onEdit(member)}
-              className={`rounded-lg border ${accentClasses.editBorder} bg-slate-950/10 p-1 text-slate-700 transition-colors dark:text-slate-200`}
-              title="Editar miembro"
-            >
-              <Edit2 className="h-3 w-3" />
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => onEdit(member)}
+                className={`rounded-lg border ${accentClasses.editBorder} bg-slate-950/10 p-1 text-slate-700 transition-colors dark:text-slate-200`}
+                title="Editar miembro"
+              >
+                <Edit2 className="h-3 w-3" />
+              </button>
+            )}
           </div>
           <h4 className="mt-1 break-words font-display text-sm font-extrabold leading-tight text-slate-900 dark:text-white">{member.name}</h4>
           <p className="mt-0.5 text-xs font-bold text-slate-800 dark:text-slate-300">{member.role}</p>
@@ -649,10 +669,12 @@ function HoldingCard({
 function HoldingColumn({
   members,
   fitMode,
+  readOnly = false,
   onEditMember,
 }: {
   members: HoldingMember[];
   fitMode: boolean;
+  readOnly?: boolean;
   onEditMember: (member: HoldingMember) => void;
 }) {
   const level0 = members.find((member) => member.level === 0);
@@ -676,13 +698,13 @@ function HoldingColumn({
       <div className={`relative flex flex-1 flex-col ${fitMode ? 'p-2' : 'p-4'}`}>
         <div className="absolute left-1/2 top-[96px] h-[118px] w-0.5 -translate-x-1/2 bg-amber-400/70" />
 
-        {level0 && <HoldingCard member={level0} icon={Crown} accent="amber" onEdit={onEditMember} />}
+        {level0 && <HoldingCard member={level0} icon={Crown} accent="amber" readOnly={readOnly} onEdit={onEditMember} />}
 
         <div className="z-10 mx-auto my-3 rounded-full border border-amber-300/50 bg-slate-950 px-2 py-0.5 text-[10px] font-bold text-amber-300">
           reporta / asesora
         </div>
 
-        {level1 && <HoldingCard member={level1} icon={User} accent="cyan" onEdit={onEditMember} />}
+        {level1 && <HoldingCard member={level1} icon={User} accent="cyan" readOnly={readOnly} onEdit={onEditMember} />}
 
         <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-cyan-400/40 bg-slate-900/45 p-3 text-center">
           <Network className="mb-2 h-5 w-5 text-cyan-700 dark:text-cyan-300" />
@@ -704,6 +726,7 @@ export default function App() {
   const [fitToScreen, setFitToScreen] = useState(false);
   const [bankCollapsed, setBankCollapsed] = useState(false);
   const [connectionMode, setConnectionMode] = useState(false);
+  const [isPresentationMode, setIsPresentationMode] = useState(false);
   const [selectedConnectionPersonId, setSelectedConnectionPersonId] = useState<string | null>(null);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [activePersonId, setActivePersonId] = useState<string | null>(null);
@@ -1239,42 +1262,73 @@ export default function App() {
                 <Network className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="font-display text-xl font-extrabold tracking-tight text-white">Tablero Horizontal de Equipos</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="font-display text-xl font-extrabold tracking-tight text-white">Tablero Horizontal de Equipos</h1>
+                  {isPresentationMode && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-400/40 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-300">
+                      <Presentation className="h-3 w-3" />
+                      Modo Presentación Activo
+                    </span>
+                  )}
+                </div>
                 <p className="mt-1 text-xs text-slate-400">Empresas, proyectos, licitaciones y tareas en una sola vista plana y conectable.</p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={openNewPersonModal}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white shadow-md transition-colors hover:bg-indigo-500"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Persona
-              </button>
-              <button
-                type="button"
-                onClick={openNewEntityModal}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-md transition-colors hover:bg-emerald-500"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Entidad
-              </button>
+              {!isPresentationMode && (
+                <button
+                  type="button"
+                  onClick={openNewPersonModal}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white shadow-md transition-colors hover:bg-indigo-500"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Persona
+                </button>
+              )}
+              {!isPresentationMode && (
+                <button
+                  type="button"
+                  onClick={openNewEntityModal}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-md transition-colors hover:bg-emerald-500"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Entidad
+                </button>
+              )}
+              {!isPresentationMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConnectionMode((prev) => !prev);
+                    setSelectedConnectionPersonId(null);
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
+                    connectionMode
+                      ? 'border-amber-400 bg-amber-400 text-slate-950'
+                      : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
+                  }`}
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  Modo conexión
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
-                  setConnectionMode((prev) => !prev);
+                  setIsPresentationMode((prev) => !prev);
+                  setConnectionMode(false);
                   setSelectedConnectionPersonId(null);
                 }}
                 className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
-                  connectionMode
-                    ? 'border-amber-400 bg-amber-400 text-slate-950'
+                  isPresentationMode
+                    ? 'border-indigo-400 bg-indigo-400 text-slate-950'
                     : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
                 }`}
+                title={isPresentationMode ? 'Salir del modo presentación' : 'Ocultar controles de edición para presentar'}
               >
-                <Link2 className="h-3.5 w-3.5" />
-                Modo conexión
+                <Presentation className="h-3.5 w-3.5" />
+                Modo Presentación
               </button>
               <button
                 type="button"
@@ -1448,7 +1502,7 @@ export default function App() {
                 })}
               </svg>
 
-              <HoldingColumn members={board.holdingMembers} fitMode={fitToScreen} onEditMember={openEditHoldingModal} />
+              <HoldingColumn members={board.holdingMembers} fitMode={fitToScreen} readOnly={isPresentationMode} onEditMember={openEditHoldingModal} />
 
               <section
                 className={`z-30 flex h-[620px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-slate-800 bg-slate-950/80 backdrop-blur-md transition-all ${
@@ -1486,6 +1540,7 @@ export default function App() {
                         dense={fitToScreen}
                         selected={selectedConnectionPersonId === person.id}
                         connectionMode={connectionMode}
+                        readOnly={isPresentationMode}
                         onOpen={(nextPerson) => setSelectedPersonId(nextPerson.id)}
                         onConnect={handleConnectPerson}
                       />
@@ -1510,6 +1565,7 @@ export default function App() {
                       fitMode={fitToScreen}
                       selectedConnectionPersonId={selectedConnectionPersonId}
                       connectionMode={connectionMode}
+                      readOnly={isPresentationMode}
                       onOpenPerson={(person) => setSelectedPersonId(person.id)}
                       onConnect={handleConnectPerson}
                       onEditEntity={openEditEntityModal}
@@ -1553,60 +1609,64 @@ export default function App() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => openEditPersonModal(selectedPerson)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-500"
-              >
-                <Edit2 className="h-3.5 w-3.5" />
-                Editar
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeletePerson(selectedPerson.id)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-950/30 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-950/50"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Eliminar definitivamente
-              </button>
-            </div>
+            {!isPresentationMode && (
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => openEditPersonModal(selectedPerson)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-500"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeletePerson(selectedPerson.id)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-950/30 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-950/50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Eliminar definitivamente
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 space-y-5 overflow-y-auto p-5">
-            <section>
-              <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">Copiar a otra entidad</h3>
-              <div className="rounded-xl border border-slate-800 bg-slate-900/55 p-3">
-                {manualAssignableEntities.length === 0 ? (
-                  <p className="text-xs text-slate-500">Esta persona ya participa en todas las entidades disponibles.</p>
-                ) : (
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <select
-                      value={manualAssignEntityId}
-                      onChange={(event) => setManualAssignEntityId(event.target.value)}
-                      className="min-w-0 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-200 outline-none focus:border-indigo-500"
-                    >
-                      {manualAssignableEntities.map((entity) => (
-                        <option key={entity.id} value={entity.id}>
-                          {entity.name} · {ENTITY_META[entity.type].label}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!manualAssignEntityId) return;
-                        handleAssignPersonToEntity(selectedPerson.id, manualAssignEntityId);
-                      }}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-emerald-500"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Copiar
-                    </button>
-                  </div>
-                )}
-              </div>
-            </section>
+            {!isPresentationMode && (
+              <section>
+                <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">Copiar a otra entidad</h3>
+                <div className="rounded-xl border border-slate-800 bg-slate-900/55 p-3">
+                  {manualAssignableEntities.length === 0 ? (
+                    <p className="text-xs text-slate-500">Esta persona ya participa en todas las entidades disponibles.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <select
+                        value={manualAssignEntityId}
+                        onChange={(event) => setManualAssignEntityId(event.target.value)}
+                        className="min-w-0 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-200 outline-none focus:border-indigo-500"
+                      >
+                        {manualAssignableEntities.map((entity) => (
+                          <option key={entity.id} value={entity.id}>
+                            {entity.name} · {ENTITY_META[entity.type].label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!manualAssignEntityId) return;
+                          handleAssignPersonToEntity(selectedPerson.id, manualAssignEntityId);
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-emerald-500"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Copiar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
             <section>
               <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">Participación y funciones por entidad</h3>
               <div className="space-y-3">
@@ -1617,22 +1677,30 @@ export default function App() {
                     <div key={assignment.id} className="rounded-xl border border-slate-800 bg-slate-900/55 p-3">
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <strong className="text-sm text-slate-200">{getEntityName(assignment.entityId)}</strong>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveAssignment(assignment.id)}
-                          className="rounded-lg p-1.5 text-slate-500 hover:bg-red-950/40 hover:text-red-300"
-                          title="Quitar asignación"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {!isPresentationMode && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAssignment(assignment.id)}
+                            className="rounded-lg p-1.5 text-slate-500 hover:bg-red-950/40 hover:text-red-300"
+                            title="Quitar asignación"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
-                      <textarea
-                        value={assignment.taskText}
-                        onChange={(event) => handleUpdateAssignmentTask(assignment.id, event.target.value)}
-                        rows={3}
-                        placeholder="Describe funciones, tareas o situación específica en esta entidad..."
-                        className="w-full resize-none rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs leading-relaxed text-slate-200 outline-none focus:border-indigo-500"
-                      />
+                      {isPresentationMode ? (
+                        <p className="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs leading-relaxed text-slate-300">
+                          {assignment.taskText || 'Sin función específica registrada.'}
+                        </p>
+                      ) : (
+                        <textarea
+                          value={assignment.taskText}
+                          onChange={(event) => handleUpdateAssignmentTask(assignment.id, event.target.value)}
+                          rows={3}
+                          placeholder="Describe funciones, tareas o situación específica en esta entidad..."
+                          className="w-full resize-none rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs leading-relaxed text-slate-200 outline-none focus:border-indigo-500"
+                        />
+                      )}
                     </div>
                   ))
                 )}
@@ -1648,9 +1716,11 @@ export default function App() {
                   outgoingConnections.map((connection) => (
                     <div key={connection.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/55 p-3 text-xs">
                       <span><strong className="text-slate-200">{getPersonName(connection.targetPersonId)}</strong> · {connection.label}</span>
-                      <button type="button" onClick={() => handleRemoveConnection(connection.id)} className="text-slate-500 hover:text-red-300">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {!isPresentationMode && (
+                        <button type="button" onClick={() => handleRemoveConnection(connection.id)} className="text-slate-500 hover:text-red-300">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   ))
                 )}
@@ -1666,9 +1736,11 @@ export default function App() {
                   incomingConnections.map((connection) => (
                     <div key={connection.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/55 p-3 text-xs">
                       <span><strong className="text-slate-200">{getPersonName(connection.sourcePersonId)}</strong> · {connection.label}</span>
-                      <button type="button" onClick={() => handleRemoveConnection(connection.id)} className="text-slate-500 hover:text-red-300">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {!isPresentationMode && (
+                        <button type="button" onClick={() => handleRemoveConnection(connection.id)} className="text-slate-500 hover:text-red-300">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   ))
                 )}
