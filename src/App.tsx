@@ -22,6 +22,7 @@ import {
   Edit2,
   Filter,
   Gavel,
+  GripHorizontal,
   GripVertical,
   Layers3,
   Link2,
@@ -36,6 +37,7 @@ import {
   Trash2,
   Upload,
   User,
+  UserMinus,
   Users,
   X,
 } from 'lucide-react';
@@ -100,6 +102,7 @@ interface HoldingMember {
 interface BoardState {
   people: Person[];
   entities: BoardEntity[];
+  entitiesOrder: string[];
   assignments: Assignment[];
   connections: ReportConnection[];
   holdingMembers: HoldingMember[];
@@ -174,6 +177,7 @@ const INITIAL_STATE: BoardState = {
     { id: 'entity-ejercito', type: 'licitacion', name: 'Licitación Ejército', description: 'Seguimiento de requerimientos, responsables y reportes.' },
     { id: 'entity-nomina', type: 'tarea', name: 'Cierre de Nómina', description: 'Situaciones, notas y pendientes operativos.' },
   ],
+  entitiesOrder: ['entity-cramick', 'entity-centurion', 'entity-bedrock', 'entity-alpha', 'entity-ejercito', 'entity-nomina'],
   people: [
     { id: 'person-1', name: 'Javier Alonso Farfán Santibáñez', role: 'Arquitectura', category: 'ITO', email: 'j.farfan@cramick.cl', phone: '+56 9 8765 4321', notes: 'Asesor externo para proyectos de diseño.' },
     { id: 'person-2', name: 'Carlos Amunátegui Bustos', role: 'Management', category: 'Producto', email: 'c.amunategui@cramick.cl', phone: '+56 9 1234 5678', notes: 'Lidera desarrollo de productos tácticos.' },
@@ -232,8 +236,16 @@ function isValidBoardState(value: unknown): value is BoardState {
 // `holdingMembers` was introduced after boards were already saved/exported.
 // Backfill it with the default pair so older stored/imported states keep working.
 function withHoldingMembersFallback(state: BoardState): BoardState {
+  const persistedOrder = Array.isArray(state.entitiesOrder) ? state.entitiesOrder : [];
+  const existingEntityIds = new Set(state.entities.map((entity) => entity.id));
+  const normalizedOrder = [
+    ...persistedOrder.filter((entityId) => existingEntityIds.has(entityId)),
+    ...state.entities.map((entity) => entity.id).filter((entityId) => !persistedOrder.includes(entityId)),
+  ];
+
   return {
     ...state,
+    entitiesOrder: normalizedOrder,
     holdingMembers: Array.isArray(state.holdingMembers) && state.holdingMembers.length > 0
       ? state.holdingMembers
       : INITIAL_STATE.holdingMembers,
@@ -278,7 +290,14 @@ function loadState(): BoardState {
           taskText: employee.notes || '',
         }));
 
-        return { people, entities, assignments, connections: [], holdingMembers: INITIAL_STATE.holdingMembers };
+        return {
+          people,
+          entities,
+          entitiesOrder: entities.map((entity) => entity.id),
+          assignments,
+          connections: [],
+          holdingMembers: INITIAL_STATE.holdingMembers,
+        };
       }
     }
   } catch {
@@ -350,7 +369,7 @@ function PersonCard({
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `person:${person.id}`,
-    data: { personId: person.id },
+    data: { type: 'person', personId: person.id },
     disabled: readOnly,
   });
 
@@ -425,6 +444,7 @@ function AssignmentCard({
   readOnly = false,
   onOpen,
   onConnect,
+  onRemoveAssignment,
 }: {
   assignment: Assignment;
   person: Person;
@@ -436,10 +456,11 @@ function AssignmentCard({
   readOnly?: boolean;
   onOpen: (person: Person) => void;
   onConnect: (person: Person) => void;
+  onRemoveAssignment: (assignmentId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `assignment:${assignment.id}`,
-    data: { personId: person.id },
+    data: { type: 'assignment', personId: person.id, assignmentId: assignment.id },
     disabled: readOnly,
   });
 
@@ -464,6 +485,19 @@ function AssignmentCard({
           </h4>
           {!compact && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{assignment.taskText || 'Sin función específica registrada.'}</p>}
         </div>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemoveAssignment(assignment.id);
+            }}
+            className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 opacity-70 transition-colors hover:border-red-400/50 hover:text-red-300 group-hover:opacity-100"
+            title="Quitar de esta entidad"
+          >
+            <UserMinus className="h-3.5 w-3.5" />
+          </button>
+        )}
         {!readOnly && (
           <button
             type="button"
@@ -513,10 +547,14 @@ function EntityColumn({
   selectedConnectionPersonId,
   connectionMode,
   readOnly = false,
+  canMoveLeft,
+  canMoveRight,
   onOpenPerson,
   onConnect,
   onEditEntity,
   onDeleteEntity,
+  onRemoveAssignment,
+  onMoveEntity,
 }: {
   entity: BoardEntity;
   assignments: Assignment[];
@@ -527,21 +565,38 @@ function EntityColumn({
   selectedConnectionPersonId: string | null;
   connectionMode: boolean;
   readOnly?: boolean;
+  canMoveLeft: boolean;
+  canMoveRight: boolean;
   onOpenPerson: (person: Person) => void;
   onConnect: (person: Person) => void;
   onEditEntity: (entity: BoardEntity) => void;
   onDeleteEntity: (entity: BoardEntity) => void;
+  onRemoveAssignment: (assignmentId: string) => void;
+  onMoveEntity: (entityId: string, direction: 'left' | 'right') => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `entity:${entity.id}` });
+  const {
+    attributes: columnAttributes,
+    listeners: columnListeners,
+    setNodeRef: setColumnDragRef,
+    transform: columnTransform,
+    isDragging: isColumnDragging,
+  } = useDraggable({
+    id: `column:${entity.id}`,
+    data: { type: 'entity', entityId: entity.id },
+    disabled: readOnly,
+  });
   const meta = ENTITY_META[entity.type];
   const Icon = meta.icon;
+  const columnStyle = columnTransform ? { transform: CSS.Transform.toString(columnTransform) } : undefined;
 
   return (
     <section
       ref={setNodeRef}
+      style={columnStyle}
       className={`flex h-[620px] flex-col overflow-hidden rounded-2xl border-2 bg-slate-900/45 backdrop-blur-md transition-all ${
         fitMode ? 'w-full min-w-0' : 'w-[340px] min-w-[340px] snap-start'
-      } ${isOver ? 'border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.22)]' : 'border-slate-800/80'}`}
+      } ${isColumnDragging ? 'opacity-40' : 'opacity-100'} ${isOver ? 'border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.22)]' : 'border-slate-800/80'}`}
     >
       <header className={`border-b bg-gradient-to-r ${meta.className} ${fitMode ? 'p-2.5' : 'p-4'}`}>
         <div className="flex items-start justify-between gap-3">
@@ -561,6 +616,34 @@ function EntityColumn({
             <span className={`rounded-full border border-white/20 bg-slate-950/35 font-bold text-white ${fitMode ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'}`}>{assignments.length}</span>
             {!readOnly && (
               <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  ref={setColumnDragRef}
+                  {...columnAttributes}
+                  {...columnListeners}
+                  className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white active:cursor-grabbing"
+                  title="Arrastrar columna"
+                >
+                  <GripHorizontal className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onMoveEntity(entity.id, 'left')}
+                  disabled={!canMoveLeft}
+                  className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+                  title="Mover columna a la izquierda"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onMoveEntity(entity.id, 'right')}
+                  disabled={!canMoveRight}
+                  className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+                  title="Mover columna a la derecha"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
                 <button
                   type="button"
                   onClick={() => onEditEntity(entity)}
@@ -608,11 +691,90 @@ function EntityColumn({
                 readOnly={readOnly}
                 onOpen={onOpenPerson}
                 onConnect={onConnect}
+                onRemoveAssignment={onRemoveAssignment}
               />
             );
           })
         )}
       </div>
+    </section>
+  );
+}
+
+function BankColumn({
+  people,
+  searchQuery,
+  compact,
+  dense,
+  collapsed,
+  readOnly,
+  selectedConnectionPersonId,
+  connectionMode,
+  onToggleCollapsed,
+  onOpenPerson,
+  onConnect,
+}: {
+  people: Person[];
+  searchQuery: string;
+  compact: boolean;
+  dense: boolean;
+  collapsed: boolean;
+  readOnly: boolean;
+  selectedConnectionPersonId: string | null;
+  connectionMode: boolean;
+  onToggleCollapsed: () => void;
+  onOpenPerson: (person: Person) => void;
+  onConnect: (person: Person) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: 'bank' });
+
+  return (
+    <section
+      ref={setNodeRef}
+      className={`z-30 flex h-[620px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 bg-slate-950/80 backdrop-blur-md transition-all ${
+        collapsed ? 'w-[56px] min-w-[56px]' : `min-w-[300px] w-[300px] ${dense ? '' : 'snap-start'}`
+      } ${isOver ? 'border-red-400 shadow-[0_0_24px_rgba(248,113,113,0.24)]' : 'border-slate-800'}`}
+    >
+      <header className={`flex items-start justify-between gap-2 border-b border-slate-800 ${collapsed ? 'p-2' : 'p-4'}`}>
+        {!collapsed && (
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+              <Users className="h-3 w-3" />
+              Banco
+            </span>
+            <h3 className="mt-2 font-display text-lg font-extrabold text-white">Personas disponibles</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Arrastra a cualquier columna. Suelta aquÃ­ una asignaciÃ³n para quitarla de su entidad.
+            </p>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          className="shrink-0 rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200"
+          title={collapsed ? 'Expandir banco de personas' : 'Colapsar banco de personas'}
+        >
+          {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+        </button>
+      </header>
+      {!collapsed && (
+        <div className="flex-1 space-y-2.5 overflow-y-auto p-3">
+          {people.map((person) => (
+            <PersonCard
+              key={person.id}
+              person={person}
+              searchQuery={searchQuery}
+              compact={compact}
+              dense={dense}
+              selected={selectedConnectionPersonId === person.id}
+              connectionMode={connectionMode}
+              readOnly={readOnly}
+              onOpen={onOpenPerson}
+              onConnect={onConnect}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -805,9 +967,18 @@ export default function App() {
     });
   }, [board.people, roleFilter, searchQuery]);
 
+  const orderedEntities = useMemo(() => {
+    const entityById = new Map(board.entities.map((entity) => [entity.id, entity]));
+    const ordered = board.entitiesOrder
+      .map((entityId) => entityById.get(entityId))
+      .filter((entity): entity is BoardEntity => Boolean(entity));
+    const missing = board.entities.filter((entity) => !board.entitiesOrder.includes(entity.id));
+    return [...ordered, ...missing];
+  }, [board.entities, board.entitiesOrder]);
+
   const visibleEntities = useMemo(() => {
-    return board.entities.filter((entity) => entityTypeFilter === 'todos' || entity.type === entityTypeFilter);
-  }, [board.entities, entityTypeFilter]);
+    return orderedEntities.filter((entity) => entityTypeFilter === 'todos' || entity.type === entityTypeFilter);
+  }, [entityTypeFilter, orderedEntities]);
 
   const filteredPersonIds = useMemo(() => new Set(filteredPeople.map((person) => person.id)), [filteredPeople]);
 
@@ -1023,7 +1194,7 @@ export default function App() {
       description: entityForm.description.trim() || 'Columna horizontal de trabajo.',
     };
 
-    setBoard((prev) => ({ ...prev, entities: [...prev.entities, entity] }));
+    setBoard((prev) => ({ ...prev, entities: [...prev.entities, entity], entitiesOrder: [...prev.entitiesOrder, entity.id] }));
     setEntityForm({ name: '', type: 'empresa', description: '' });
     setIsEntityModalOpen(false);
     showToast(`${entity.name} creado como ${ENTITY_META[entity.type].label}.`, 'success');
@@ -1057,6 +1228,7 @@ export default function App() {
     setBoard((prev) => ({
       ...prev,
       entities: prev.entities.filter((candidate) => candidate.id !== entityId),
+      entitiesOrder: prev.entitiesOrder.filter((candidateId) => candidateId !== entityId),
       assignments: prev.assignments.filter((assignment) => assignment.entityId !== entityId),
     }));
     showToast(`${entity.name} eliminado definitivamente.`, 'warning');
@@ -1111,16 +1283,64 @@ export default function App() {
     return true;
   };
 
+  const reorderEntity = (sourceEntityId: string, targetEntityId: string) => {
+    if (sourceEntityId === targetEntityId) return false;
+
+    const currentOrder = [
+      ...board.entitiesOrder.filter((entityId) => board.entities.some((entity) => entity.id === entityId)),
+      ...board.entities.map((entity) => entity.id).filter((entityId) => !board.entitiesOrder.includes(entityId)),
+    ];
+    const fromIndex = currentOrder.indexOf(sourceEntityId);
+    const toIndex = currentOrder.indexOf(targetEntityId);
+    if (fromIndex < 0 || toIndex < 0) return false;
+
+    const nextOrder = [...currentOrder];
+    const [moved] = nextOrder.splice(fromIndex, 1);
+    nextOrder.splice(toIndex, 0, moved);
+    setBoard((prev) => ({ ...prev, entitiesOrder: nextOrder }));
+    return true;
+  };
+
+  const handleMoveEntity = (entityId: string, direction: 'left' | 'right') => {
+    const currentOrder = orderedEntities.map((entity) => entity.id);
+    const currentIndex = currentOrder.indexOf(entityId);
+    const targetIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= currentOrder.length) return;
+
+    const nextOrder = [...currentOrder];
+    [nextOrder[currentIndex], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[currentIndex]];
+    setBoard((prev) => ({ ...prev, entitiesOrder: nextOrder }));
+    showToast('Orden de columnas actualizado.', 'success');
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
-    const personId = event.active.data.current?.personId as string | undefined;
+    const activeType = event.active.data.current?.type as string | undefined;
+    const personId = activeType === 'entity' ? undefined : event.active.data.current?.personId as string | undefined;
     setActivePersonId(personId || null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    const activeType = event.active.data.current?.type as string | undefined;
     const personId = event.active.data.current?.personId as string | undefined;
-    const targetEntityId = String(event.over?.id || '').replace('entity:', '');
+    const assignmentId = event.active.data.current?.assignmentId as string | undefined;
+    const overId = String(event.over?.id || '');
     setActivePersonId(null);
 
+    if (activeType === 'entity') {
+      const sourceEntityId = event.active.data.current?.entityId as string | undefined;
+      const targetEntityId = overId.startsWith('entity:') ? overId.replace('entity:', '') : '';
+      if (sourceEntityId && targetEntityId && reorderEntity(sourceEntityId, targetEntityId)) {
+        showToast('Orden de columnas actualizado.', 'success');
+      }
+      return;
+    }
+
+    if (activeType === 'assignment' && assignmentId && overId === 'bank') {
+      handleRemoveAssignment(assignmentId);
+      return;
+    }
+
+    const targetEntityId = overId.startsWith('entity:') ? overId.replace('entity:', '') : '';
     if (!personId || !targetEntityId) return;
 
     handleAssignPersonToEntity(personId, targetEntityId);
@@ -1504,52 +1724,21 @@ export default function App() {
 
               <HoldingColumn members={board.holdingMembers} fitMode={fitToScreen} readOnly={isPresentationMode} onEditMember={openEditHoldingModal} />
 
-              <section
-                className={`z-30 flex h-[620px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-slate-800 bg-slate-950/80 backdrop-blur-md transition-all ${
-                  bankCollapsed ? 'w-[56px] min-w-[56px]' : `min-w-[300px] w-[300px] ${fitToScreen ? '' : 'snap-start'}`
-                }`}
-              >
-                <header className={`flex items-start justify-between gap-2 border-b border-slate-800 ${bankCollapsed ? 'p-2' : 'p-4'}`}>
-                  {!bankCollapsed && (
-                    <div className="min-w-0">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
-                        <Users className="h-3 w-3" />
-                        Banco
-                      </span>
-                      <h3 className="mt-2 font-display text-lg font-extrabold text-slate-900 dark:text-slate-100">Personas disponibles</h3>
-                      <p className="mt-1 text-xs text-slate-500">Arrastra a cualquier columna. No se mueven: se copian.</p>
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setBankCollapsed((prev) => !prev)}
-                    className="shrink-0 rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200"
-                    title={bankCollapsed ? 'Expandir banco de personas' : 'Colapsar banco de personas'}
-                  >
-                    {bankCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
-                  </button>
-                </header>
-                {!bankCollapsed && (
-                  <div className="flex-1 space-y-2.5 overflow-y-auto p-3">
-                    {filteredPeople.map((person) => (
-                      <PersonCard
-                        key={person.id}
-                        person={person}
-                        searchQuery={searchQuery}
-                        compact={compactMode}
-                        dense={fitToScreen}
-                        selected={selectedConnectionPersonId === person.id}
-                        connectionMode={connectionMode}
-                        readOnly={isPresentationMode}
-                        onOpen={(nextPerson) => setSelectedPersonId(nextPerson.id)}
-                        onConnect={handleConnectPerson}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
+              <BankColumn
+                people={filteredPeople}
+                searchQuery={searchQuery}
+                compact={compactMode}
+                dense={fitToScreen}
+                collapsed={bankCollapsed}
+                readOnly={isPresentationMode}
+                selectedConnectionPersonId={selectedConnectionPersonId}
+                connectionMode={connectionMode}
+                onToggleCollapsed={() => setBankCollapsed((prev) => !prev)}
+                onOpenPerson={(nextPerson) => setSelectedPersonId(nextPerson.id)}
+                onConnect={handleConnectPerson}
+              />
 
-              {visibleEntities.map((entity) => {
+              {visibleEntities.map((entity, entityIndex) => {
                 const assignments = board.assignments.filter(
                   (assignment) => assignment.entityId === entity.id && filteredPersonIds.has(assignment.personId)
                 );
@@ -1566,10 +1755,14 @@ export default function App() {
                       selectedConnectionPersonId={selectedConnectionPersonId}
                       connectionMode={connectionMode}
                       readOnly={isPresentationMode}
+                      canMoveLeft={entityIndex > 0}
+                      canMoveRight={entityIndex < visibleEntities.length - 1}
                       onOpenPerson={(person) => setSelectedPersonId(person.id)}
                       onConnect={handleConnectPerson}
                       onEditEntity={openEditEntityModal}
                       onDeleteEntity={(entityToDelete) => handleDeleteEntity(entityToDelete.id)}
+                      onRemoveAssignment={handleRemoveAssignment}
+                      onMoveEntity={handleMoveEntity}
                     />
                   </div>
                 );
