@@ -60,6 +60,14 @@ type RoleType =
 type EntityType = 'empresa' | 'proyecto' | 'licitacion' | 'tarea';
 type ThemeMode = 'dark' | 'light';
 
+type TagColorKey = 'slate' | 'red' | 'orange' | 'amber' | 'emerald' | 'cyan' | 'blue' | 'violet' | 'pink';
+
+interface CustomTag {
+  id: string;
+  label: string;
+  color: TagColorKey;
+}
+
 interface Person {
   id: string;
   name: string;
@@ -68,6 +76,9 @@ interface Person {
   email: string;
   phone: string;
   notes: string;
+  skills: string[];
+  customTags: CustomTag[];
+  supervisor: string;
 }
 
 interface BoardEntity {
@@ -168,6 +179,28 @@ const ROLE_BADGES: Record<RoleType, { bg: string; border: string; text: string; 
 
 const ROLE_OPTIONS = Object.keys(ROLE_BADGES) as RoleType[];
 
+// High-contrast pill colors for custom tags — same bg-100/dark:bg-900 formula as
+// ROLE_BADGES so tags stay legible in both Modo Claro and Modo Oscuro.
+const TAG_COLOR_STYLES: Record<TagColorKey, { bg: string; border: string; text: string }> = {
+  slate: { bg: 'bg-slate-200 dark:bg-slate-800', border: 'border-slate-400 dark:border-slate-600', text: 'text-slate-900 dark:text-slate-100' },
+  red: { bg: 'bg-red-100 dark:bg-red-900/80', border: 'border-red-300 dark:border-red-700', text: 'text-red-800 dark:text-red-200' },
+  orange: { bg: 'bg-orange-100 dark:bg-orange-900/80', border: 'border-orange-300 dark:border-orange-700', text: 'text-orange-800 dark:text-orange-200' },
+  amber: { bg: 'bg-amber-100 dark:bg-amber-900/80', border: 'border-amber-300 dark:border-amber-700', text: 'text-amber-800 dark:text-amber-200' },
+  emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/80', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-800 dark:text-emerald-200' },
+  cyan: { bg: 'bg-cyan-100 dark:bg-cyan-900/80', border: 'border-cyan-300 dark:border-cyan-700', text: 'text-cyan-800 dark:text-cyan-200' },
+  blue: { bg: 'bg-blue-100 dark:bg-blue-900/80', border: 'border-blue-300 dark:border-blue-700', text: 'text-blue-800 dark:text-blue-200' },
+  violet: { bg: 'bg-violet-100 dark:bg-violet-900/80', border: 'border-violet-300 dark:border-violet-700', text: 'text-violet-800 dark:text-violet-200' },
+  pink: { bg: 'bg-pink-100 dark:bg-pink-900/80', border: 'border-pink-300 dark:border-pink-700', text: 'text-pink-800 dark:text-pink-200' },
+};
+
+const TAG_COLOR_OPTIONS = Object.keys(TAG_COLOR_STYLES) as TagColorKey[];
+
+const SUGGESTED_TAGS = ['RRHH', 'Licitaciones', 'ITO', 'Dirección', 'Legal', 'Finanzas', 'Tecnología', 'Logística'];
+
+function getTagColorStyle(color: TagColorKey) {
+  return TAG_COLOR_STYLES[color] || TAG_COLOR_STYLES.slate;
+}
+
 const INITIAL_STATE: BoardState = {
   entities: [
     { id: 'entity-cramick', type: 'empresa', name: 'Cramick S.A.', description: 'Licitaciones de defensa y logística militar.' },
@@ -179,14 +212,14 @@ const INITIAL_STATE: BoardState = {
   ],
   entitiesOrder: ['entity-cramick', 'entity-centurion', 'entity-bedrock', 'entity-alpha', 'entity-ejercito', 'entity-nomina'],
   people: [
-    { id: 'person-1', name: 'Javier Alonso Farfán Santibáñez', role: 'Arquitectura', category: 'ITO', email: 'j.farfan@cramick.cl', phone: '+56 9 8765 4321', notes: 'Asesor externo para proyectos de diseño.' },
-    { id: 'person-2', name: 'Carlos Amunátegui Bustos', role: 'Management', category: 'Producto', email: 'c.amunategui@cramick.cl', phone: '+56 9 1234 5678', notes: 'Lidera desarrollo de productos tácticos.' },
-    { id: 'person-3', name: 'Christian Alberto Araya Cheuquepil', role: 'Administrativo', category: 'Administración', email: 'c.araya@cramick.cl', phone: '+56 9 2233 4455', notes: 'Soporte ejecutivo y coordinación administrativa.' },
-    { id: 'person-4', name: 'Aleksandar Plazinic Plazinic', role: 'Asesor', category: 'Defensa', email: 'a.plazinic@cramick.cl', phone: '+56 9 5566 7788', notes: 'Certificaciones y estándares de defensa.' },
-    { id: 'person-5', name: 'Eloin Rojas Carrasco', role: 'Logística', category: 'Inventario', email: 'e.rojas@cramick.cl', phone: '+56 9 9988 7766', notes: 'Control de vestuario y equipo militar.' },
-    { id: 'person-6', name: 'María Victoria Valderas Sánchez', role: 'RRHH', category: 'Coordinación', email: 'mv.valderas@cramick.cl', phone: '+56 9 3344 5566', notes: 'Agenda comercial y adquisiciones.' },
-    { id: 'person-7', name: 'Santiago Hernandes Barbara', role: 'Ventas', category: 'Licitaciones', email: 's.hernandes@centurion.cl', phone: '+56 9 4433 2211', notes: 'Licitaciones de blindaje corporal.' },
-    { id: 'person-8', name: 'Marko Jovovic Jovovic', role: 'Management', category: 'Compras', email: 'm.jovovic@centurion.cl', phone: '+56 9 7766 5544', notes: 'Adquisiciones internacionales y contratos.' },
+    { id: 'person-1', name: 'Javier Alonso Farfán Santibáñez', role: 'Arquitectura', category: 'ITO', email: 'j.farfan@cramick.cl', phone: '+56 9 8765 4321', notes: 'Asesor externo para proyectos de diseño.', skills: ['Diseño estructural', 'Revisión de planos'], customTags: [{ id: 'tag-1', label: 'ITO', color: 'cyan' }], supervisor: '' },
+    { id: 'person-2', name: 'Carlos Amunátegui Bustos', role: 'Management', category: 'Producto', email: 'c.amunategui@cramick.cl', phone: '+56 9 1234 5678', notes: 'Lidera desarrollo de productos tácticos.', skills: ['Gestión de producto', 'Liderazgo de equipos'], customTags: [{ id: 'tag-2', label: 'Dirección', color: 'blue' }], supervisor: '' },
+    { id: 'person-3', name: 'Christian Alberto Araya Cheuquepil', role: 'Administrativo', category: 'Administración', email: 'c.araya@cramick.cl', phone: '+56 9 2233 4455', notes: 'Soporte ejecutivo y coordinación administrativa.', skills: ['Coordinación administrativa'], customTags: [{ id: 'tag-3', label: 'RRHH', color: 'amber' }], supervisor: 'Coordinado por Carlos Amunátegui' },
+    { id: 'person-4', name: 'Aleksandar Plazinic Plazinic', role: 'Asesor', category: 'Defensa', email: 'a.plazinic@cramick.cl', phone: '+56 9 5566 7788', notes: 'Certificaciones y estándares de defensa.', skills: ['Certificaciones de defensa'], customTags: [{ id: 'tag-4', label: 'Legal', color: 'violet' }], supervisor: '' },
+    { id: 'person-5', name: 'Eloin Rojas Carrasco', role: 'Logística', category: 'Inventario', email: 'e.rojas@cramick.cl', phone: '+56 9 9988 7766', notes: 'Control de vestuario y equipo militar.', skills: ['Control de inventario'], customTags: [{ id: 'tag-5', label: 'Logística', color: 'orange' }], supervisor: '' },
+    { id: 'person-6', name: 'María Victoria Valderas Sánchez', role: 'RRHH', category: 'Coordinación', email: 'mv.valderas@cramick.cl', phone: '+56 9 3344 5566', notes: 'Agenda comercial y adquisiciones.', skills: ['Gestión de personas', 'Negociación'], customTags: [{ id: 'tag-6', label: 'RRHH', color: 'amber' }], supervisor: '' },
+    { id: 'person-7', name: 'Santiago Hernandes Barbara', role: 'Ventas', category: 'Licitaciones', email: 's.hernandes@centurion.cl', phone: '+56 9 4433 2211', notes: 'Licitaciones de blindaje corporal.', skills: ['Licitaciones públicas'], customTags: [{ id: 'tag-7', label: 'Licitaciones', color: 'emerald' }], supervisor: '' },
+    { id: 'person-8', name: 'Marko Jovovic Jovovic', role: 'Management', category: 'Compras', email: 'm.jovovic@centurion.cl', phone: '+56 9 7766 5544', notes: 'Adquisiciones internacionales y contratos.', skills: ['Negociación de contratos'], customTags: [], supervisor: '' },
   ],
   assignments: [
     { id: 'assign-1', personId: 'person-1', entityId: 'entity-cramick', taskText: 'Revisar planos estructurales y apoyar criterios técnicos.' },
@@ -233,9 +266,35 @@ function isValidBoardState(value: unknown): value is BoardState {
   );
 }
 
-// `holdingMembers` was introduced after boards were already saved/exported.
-// Backfill it with the default pair so older stored/imported states keep working.
-function withHoldingMembersFallback(state: BoardState): BoardState {
+// `skills` / `customTags` / `supervisor` were introduced after boards were already
+// saved/exported. Backfill them so older stored/imported people keep working.
+function normalizePerson(person: Partial<Person> & { id: string; name: string }): Person {
+  const rawTags = Array.isArray(person.customTags) ? person.customTags : [];
+
+  return {
+    id: person.id,
+    name: person.name,
+    role: person.role && ROLE_OPTIONS.includes(person.role) ? person.role : 'Operativo',
+    category: person.category || 'General',
+    email: person.email || '',
+    phone: person.phone || '',
+    notes: person.notes || '',
+    skills: Array.isArray(person.skills) ? person.skills.filter((skill): skill is string => typeof skill === 'string') : [],
+    customTags: rawTags
+      .filter((tag) => Boolean(tag) && typeof tag === 'object' && typeof tag.label === 'string')
+      .map((tag) => ({
+        id: tag.id || createId('tag'),
+        label: tag.label,
+        color: tag.color && TAG_COLOR_OPTIONS.includes(tag.color) ? tag.color : 'slate',
+      })),
+    supervisor: typeof person.supervisor === 'string' ? person.supervisor : '',
+  };
+}
+
+// `holdingMembers`, `entitiesOrder` and the extended Person fields were introduced
+// after boards were already saved/exported. Backfill them so older stored/imported
+// states keep working without losing data.
+function normalizeBoardState(state: BoardState): BoardState {
   const persistedOrder = Array.isArray(state.entitiesOrder) ? state.entitiesOrder : [];
   const existingEntityIds = new Set(state.entities.map((entity) => entity.id));
   const normalizedOrder = [
@@ -246,6 +305,7 @@ function withHoldingMembersFallback(state: BoardState): BoardState {
   return {
     ...state,
     entitiesOrder: normalizedOrder,
+    people: state.people.map(normalizePerson),
     holdingMembers: Array.isArray(state.holdingMembers) && state.holdingMembers.length > 0
       ? state.holdingMembers
       : INITIAL_STATE.holdingMembers,
@@ -260,7 +320,7 @@ function loadState(): BoardState {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (isValidBoardState(parsed)) {
-        return withHoldingMembersFallback(parsed);
+        return normalizeBoardState(parsed);
       }
     }
 
@@ -269,15 +329,17 @@ function loadState(): BoardState {
       const legacyEmployees = JSON.parse(legacy) as Array<{ id: string; name: string; role: RoleType; companyId: string; email?: string; phone?: string; notes?: string }>;
       if (Array.isArray(legacyEmployees)) {
         const entities = INITIAL_STATE.entities;
-        const people = legacyEmployees.map((employee) => ({
-          id: employee.id.replace('emp', 'person'),
-          name: employee.name,
-          role: ROLE_OPTIONS.includes(employee.role) ? employee.role : 'Operativo',
-          category: 'Migrado',
-          email: employee.email || '',
-          phone: employee.phone || '',
-          notes: employee.notes || '',
-        }));
+        const people = legacyEmployees.map((employee) =>
+          normalizePerson({
+            id: employee.id.replace('emp', 'person'),
+            name: employee.name,
+            role: ROLE_OPTIONS.includes(employee.role) ? employee.role : 'Operativo',
+            category: 'Migrado',
+            email: employee.email || '',
+            phone: employee.phone || '',
+            notes: employee.notes || '',
+          })
+        );
         const companyMap: Record<string, string> = {
           cramick: 'entity-cramick',
           centurion: 'entity-centurion',
@@ -343,6 +405,51 @@ function RoleBadge({ role }: { role: RoleType }) {
       <span className={`h-1.5 w-1.5 rounded-full ${colors.dot}`} />
       {role}
     </span>
+  );
+}
+
+function PersonBadges({ person, limit }: { person: Person; limit?: number }) {
+  const skills = person.skills || [];
+  const tags = person.customTags || [];
+  const totalBadges = skills.length + tags.length;
+
+  if (totalBadges === 0 && !person.supervisor) return null;
+
+  const visibleSkillCount = limit === undefined ? skills.length : Math.min(skills.length, limit);
+  const visibleTagCount = limit === undefined ? tags.length : Math.max(0, Math.min(tags.length, limit - visibleSkillCount));
+  const visibleSkills = skills.slice(0, visibleSkillCount);
+  const visibleTags = tags.slice(0, visibleTagCount);
+  const hiddenCount = totalBadges - visibleSkills.length - visibleTags.length;
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      {visibleSkills.map((skill) => (
+        <span
+          key={skill}
+          className="inline-flex items-center rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[9px] font-bold text-indigo-800 dark:border-indigo-700 dark:bg-indigo-900/80 dark:text-indigo-200"
+        >
+          {skill}
+        </span>
+      ))}
+      {visibleTags.map((tag) => {
+        const colors = getTagColorStyle(tag.color);
+        return (
+          <span key={tag.id} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-bold ${colors.bg} ${colors.border} ${colors.text}`}>
+            {tag.label}
+          </span>
+        );
+      })}
+      {hiddenCount > 0 && (
+        <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-[9px] font-bold text-slate-400">
+          +{hiddenCount}
+        </span>
+      )}
+      {person.supervisor && (
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-400 bg-slate-200 px-2 py-0.5 text-[9px] font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300">
+          Supervisa: {person.supervisor}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -429,6 +536,7 @@ function PersonCard({
           </span>
         </div>
       )}
+      <PersonBadges person={person} limit={compact || dense ? 2 : undefined} />
     </div>
   );
 }
@@ -533,6 +641,7 @@ function AssignmentCard({
           </span>
         </div>
       )}
+      <PersonBadges person={person} limit={compact || dense ? 2 : undefined} />
     </div>
   );
 }
@@ -912,7 +1021,13 @@ export default function App() {
     email: '',
     phone: '',
     notes: '',
+    skills: [] as string[],
+    customTags: [] as CustomTag[],
+    supervisor: '',
   });
+  const [skillInput, setSkillInput] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [tagColorInput, setTagColorInput] = useState<TagColorKey>('slate');
 
   const [entityForm, setEntityForm] = useState({
     name: '',
@@ -1044,7 +1159,7 @@ export default function App() {
 
       if (!window.confirm('Importar reemplazará todos los datos actuales del tablero. ¿Continuar?')) return;
 
-      setBoard(withHoldingMembersFallback(parsed));
+      setBoard(normalizeBoardState(parsed));
       setSelectedPersonId(null);
       setSelectedConnectionPersonId(null);
       showToast('Tablero importado correctamente.', 'success');
@@ -1099,7 +1214,10 @@ export default function App() {
 
   const openNewPersonModal = () => {
     setEditingPersonId(null);
-    setPersonForm({ name: '', role: 'Operativo', category: '', email: '', phone: '', notes: '' });
+    setPersonForm({ name: '', role: 'Operativo', category: '', email: '', phone: '', notes: '', skills: [], customTags: [], supervisor: '' });
+    setSkillInput('');
+    setTagInput('');
+    setTagColorInput('slate');
     setIsPersonModalOpen(true);
   };
 
@@ -1112,33 +1230,68 @@ export default function App() {
       email: person.email,
       phone: person.phone,
       notes: person.notes,
+      skills: person.skills,
+      customTags: person.customTags,
+      supervisor: person.supervisor,
     });
+    setSkillInput('');
+    setTagInput('');
+    setTagColorInput('slate');
     setIsPersonModalOpen(true);
+  };
+
+  const addSkillToForm = () => {
+    const skill = skillInput.trim();
+    if (!skill) return;
+    if (personForm.skills.some((existing) => existing.toLowerCase() === skill.toLowerCase())) {
+      setSkillInput('');
+      return;
+    }
+    setPersonForm((prev) => ({ ...prev, skills: [...prev.skills, skill] }));
+    setSkillInput('');
+  };
+
+  const removeSkillFromForm = (skill: string) => {
+    setPersonForm((prev) => ({ ...prev, skills: prev.skills.filter((existing) => existing !== skill) }));
+  };
+
+  const addTagToForm = (label: string, color: TagColorKey = tagColorInput) => {
+    const cleanLabel = label.trim();
+    if (!cleanLabel) return;
+    if (personForm.customTags.some((tag) => tag.label.toLowerCase() === cleanLabel.toLowerCase())) return;
+    setPersonForm((prev) => ({ ...prev, customTags: [...prev.customTags, { id: createId('tag'), label: cleanLabel, color }] }));
+  };
+
+  const removeTagFromForm = (tagId: string) => {
+    setPersonForm((prev) => ({ ...prev, customTags: prev.customTags.filter((tag) => tag.id !== tagId) }));
   };
 
   const handleSavePerson = (event: React.FormEvent) => {
     event.preventDefault();
     if (!personForm.name.trim()) return;
 
+    const cleanPersonForm = {
+      ...personForm,
+      name: personForm.name.trim(),
+      category: personForm.category.trim() || 'General',
+      email: personForm.email.trim(),
+      phone: personForm.phone.trim(),
+      notes: personForm.notes.trim(),
+      supervisor: personForm.supervisor.trim(),
+    };
+
     if (editingPersonId) {
       setBoard((prev) => ({
         ...prev,
         people: prev.people.map((person) =>
-          person.id === editingPersonId
-            ? { ...person, ...personForm, name: personForm.name.trim(), category: personForm.category.trim() || 'General' }
-            : person
+          person.id === editingPersonId ? { ...person, ...cleanPersonForm } : person
         ),
       }));
       showToast('Persona actualizada.', 'success');
     } else {
       const person: Person = {
         id: createId('person'),
-        name: personForm.name.trim(),
-        role: personForm.role,
-        category: personForm.category.trim() || 'General',
-        email: personForm.email.trim(),
-        phone: personForm.phone.trim(),
-        notes: personForm.notes.trim(),
+        ...cleanPersonForm,
       };
       setBoard((prev) => ({ ...prev, people: [...prev.people, person] }));
       showToast(`${person.name} agregado al banco de personas.`, 'success');
@@ -1797,6 +1950,7 @@ export default function App() {
                   <RoleBadge role={selectedPerson.role} />
                   <span className="rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-slate-400">{selectedPerson.category}</span>
                 </div>
+                <PersonBadges person={selectedPerson} />
               </div>
               <button type="button" onClick={() => setSelectedPersonId(null)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-900 hover:text-white">
                 <X className="h-5 w-5" />
@@ -1945,15 +2099,15 @@ export default function App() {
 
       {isPersonModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <form onSubmit={handleSavePerson} className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between">
+          <form onSubmit={handleSavePerson} className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
+            <div className="mb-5 flex shrink-0 items-center justify-between">
               <h2 className="font-display text-lg font-extrabold text-white">{editingPersonId ? 'Editar persona' : 'Agregar persona'}</h2>
               <button type="button" onClick={() => setIsPersonModalOpen(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid gap-4 overflow-y-auto pr-1">
               <label className="text-xs font-bold text-slate-400">
                 Nombre
                 <input required value={personForm.name} onChange={(event) => setPersonForm({ ...personForm, name: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500" />
@@ -1980,13 +2134,131 @@ export default function App() {
                   <input value={personForm.phone} onChange={(event) => setPersonForm({ ...personForm, phone: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500" />
                 </label>
               </div>
+
+              <label className="text-xs font-bold text-slate-400">
+                Coordinador / Supervisor
+                <input
+                  value={personForm.supervisor}
+                  onChange={(event) => setPersonForm({ ...personForm, supervisor: event.target.value })}
+                  placeholder="Ej: Coordinado por Christian"
+                  className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500"
+                />
+              </label>
+
+              <div>
+                <span className="text-xs font-bold text-slate-400">Habilidades clave</span>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {personForm.skills.length === 0 ? (
+                    <p className="text-[11px] text-slate-500">Sin habilidades agregadas todavía.</p>
+                  ) : (
+                    personForm.skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold text-indigo-800 dark:border-indigo-700 dark:bg-indigo-900/80 dark:text-indigo-200"
+                      >
+                        {skill}
+                        <button type="button" onClick={() => removeSkillFromForm(skill)} className="opacity-70 hover:opacity-100">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={skillInput}
+                    onChange={(event) => setSkillInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        addSkillToForm();
+                      }
+                    }}
+                    placeholder="Ej: Negociación, Gestión de Personas..."
+                    className="min-w-0 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500"
+                  />
+                  <button type="button" onClick={addSkillToForm} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-500">
+                    <Plus className="h-3.5 w-3.5" />
+                    Agregar
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-bold text-slate-400">Etiquetas personalizadas</span>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {personForm.customTags.length === 0 ? (
+                    <p className="text-[11px] text-slate-500">Sin etiquetas agregadas todavía.</p>
+                  ) : (
+                    personForm.customTags.map((tag) => {
+                      const colors = getTagColorStyle(tag.color);
+                      return (
+                        <span key={tag.id} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${colors.bg} ${colors.border} ${colors.text}`}>
+                          {tag.label}
+                          <button type="button" onClick={() => removeTagFromForm(tag.id)} className="opacity-70 hover:opacity-100">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {SUGGESTED_TAGS.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => addTagToForm(label)}
+                      className="rounded-full border border-slate-700 bg-slate-950 px-2.5 py-1 text-[10px] font-semibold text-slate-300 transition-colors hover:border-indigo-500 hover:text-indigo-300"
+                    >
+                      + {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={tagInput}
+                    onChange={(event) => setTagInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        addTagToForm(tagInput);
+                        setTagInput('');
+                      }
+                    }}
+                    placeholder="Nombre de etiqueta personalizada"
+                    className="min-w-0 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500"
+                  />
+                  <select
+                    value={tagColorInput}
+                    onChange={(event) => setTagColorInput(event.target.value as TagColorKey)}
+                    className="shrink-0 rounded-xl border border-slate-800 bg-slate-950 px-2 py-2 text-xs font-semibold text-slate-200 outline-none focus:border-indigo-500"
+                  >
+                    {TAG_COLOR_OPTIONS.map((colorKey) => (
+                      <option key={colorKey} value={colorKey} className="bg-slate-950">{colorKey}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      addTagToForm(tagInput);
+                      setTagInput('');
+                    }}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-500"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Agregar
+                  </button>
+                </div>
+              </div>
+
               <label className="text-xs font-bold text-slate-400">
                 Notas
-                <textarea value={personForm.notes} onChange={(event) => setPersonForm({ ...personForm, notes: event.target.value })} rows={3} className="mt-1 w-full resize-none rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500" />
+                <textarea value={personForm.notes} onChange={(event) => setPersonForm({ ...personForm, notes: event.target.value })} rows={3} placeholder="Perfil, rol general o historial breve de la persona..." className="mt-1 w-full resize-none rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500" />
               </label>
             </div>
 
-            <div className="mt-5 flex items-center justify-between gap-2">
+            <div className="mt-5 flex shrink-0 items-center justify-between gap-2">
               {editingPersonId ? (
                 <button
                   type="button"
