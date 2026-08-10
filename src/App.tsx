@@ -1439,49 +1439,42 @@ function EntityColumn({
           )}
         </div>
 
-        <div className="border-t border-slate-800/70 pt-2">
-          <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Participantes sin puesto ({quickAssignments.length})</span>
-        </div>
+        {quickAssignments.length > 0 && (
+          <div className="border-t border-slate-800/70 pt-2">
+            <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Participantes sin puesto ({quickAssignments.length})</span>
+            <SortableContext items={quickAssignments.map((assignment) => `assignment:${assignment.id}`)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {quickAssignments.map((assignment, assignmentIndex) => {
+                  const person = people.find((candidate) => candidate.id === assignment.personId);
+                  if (!person) return null;
 
-        {quickAssignments.length === 0 ? (
-          <div className="flex min-h-[100px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-800 p-6 text-center text-slate-500">
-            <Users className="mb-2 h-8 w-8 opacity-25" />
-            <p className="text-xs font-semibold">{participantCount === 0 ? 'Arrastra personas aquí' : 'Participantes integrados en puestos'}</p>
-            <p className="mt-1 text-[10px] leading-relaxed">{participantCount === 0 ? 'Se copian a esta columna sin salir de su origen.' : 'Las personas con puesto se muestran una sola vez arriba.'}</p>
+                  return (
+                    <AssignmentCard
+                      key={assignment.id}
+                      assignment={assignment}
+                      person={person}
+                      searchQuery={searchQuery}
+                      compact={compact}
+                      dense={fitMode}
+                      selected={selectedConnectionPersonId === person.id}
+                      highlighted={hoveredPersonId === person.id}
+                      connectionMode={connectionMode}
+                      readOnly={readOnly}
+                      canMoveUp={assignmentIndex > 0}
+                      canMoveDown={assignmentIndex < quickAssignments.length - 1}
+                      badgesExpanded={expandedPersonIds.has(person.id)}
+                      onOpen={onOpenPerson}
+                      onConnect={onConnect}
+                      onRemoveAssignment={onRemoveAssignment}
+                      onMoveAssignment={moveAssignment}
+                      onHover={onHoverPerson}
+                      onToggleBadges={onToggleBadges}
+                    />
+                  );
+                })}
+              </div>
+            </SortableContext>
           </div>
-        ) : (
-          <SortableContext items={quickAssignments.map((assignment) => `assignment:${assignment.id}`)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2">
-              {quickAssignments.map((assignment, assignmentIndex) => {
-                const person = people.find((candidate) => candidate.id === assignment.personId);
-                if (!person) return null;
-
-                return (
-                  <AssignmentCard
-                    key={assignment.id}
-                    assignment={assignment}
-                    person={person}
-                    searchQuery={searchQuery}
-                    compact={compact}
-                    dense={fitMode}
-                    selected={selectedConnectionPersonId === person.id}
-                    highlighted={hoveredPersonId === person.id}
-                    connectionMode={connectionMode}
-                    readOnly={readOnly}
-                    canMoveUp={assignmentIndex > 0}
-                    canMoveDown={assignmentIndex < quickAssignments.length - 1}
-                    badgesExpanded={expandedPersonIds.has(person.id)}
-                    onOpen={onOpenPerson}
-                    onConnect={onConnect}
-                    onRemoveAssignment={onRemoveAssignment}
-                    onMoveAssignment={moveAssignment}
-                    onHover={onHoverPerson}
-                    onToggleBadges={onToggleBadges}
-                  />
-                );
-              })}
-            </div>
-          </SortableContext>
         )}
       </div>
     </section>
@@ -2274,6 +2267,7 @@ export default function App() {
     title: '',
     department: '',
     fte: 1,
+    assignedPersonId: '',
   });
 
   const sensors = useSensors(
@@ -2714,14 +2708,14 @@ export default function App() {
   const openNewPositionModal = (entityId: string) => {
     setEditingPositionId(null);
     setPositionEntityId(entityId);
-    setPositionForm({ title: '', department: '', fte: 1 });
+    setPositionForm({ title: '', department: '', fte: 1, assignedPersonId: '' });
     setIsPositionModalOpen(true);
   };
 
   const openEditPositionModal = (position: Position, entityId: string) => {
     setEditingPositionId(position.id);
     setPositionEntityId(entityId);
-    setPositionForm({ title: position.title, department: position.department, fte: position.fte });
+    setPositionForm({ title: position.title, department: position.department, fte: position.fte, assignedPersonId: position.assignedPersonId || '' });
     setIsPositionModalOpen(true);
   };
 
@@ -2741,7 +2735,7 @@ export default function App() {
                 ...entity,
                 positions: (entity.positions || []).map((position) =>
                   position.id === editingPositionId
-                    ? { ...position, title: cleanTitle, department: cleanDepartment, fte: positionForm.fte }
+                    ? { ...position, title: cleanTitle, department: cleanDepartment, fte: positionForm.fte, assignedPersonId: positionForm.assignedPersonId || null }
                     : position
                 ),
               }
@@ -2755,7 +2749,7 @@ export default function App() {
         title: cleanTitle,
         department: cleanDepartment,
         fte: positionForm.fte,
-        assignedPersonId: null,
+        assignedPersonId: positionForm.assignedPersonId || null,
       };
       setBoard((prev) => ({
         ...prev,
@@ -2763,7 +2757,8 @@ export default function App() {
           entity.id === positionEntityId ? { ...entity, positions: [...(entity.positions || []), position] } : entity
         ),
       }));
-      showToast(`Puesto "${position.title}" creado (vacante).`, 'success');
+      const assignedPerson = board.people.find((person) => person.id === position.assignedPersonId);
+      showToast(assignedPerson ? `Puesto "${position.title}" creado para ${assignedPerson.name}.` : `Puesto "${position.title}" creado (vacante).`, 'success');
     }
 
     setEditingPositionId(null);
@@ -4133,8 +4128,8 @@ export default function App() {
             </div>
 
             <p className="mb-4 text-xs text-slate-500">
-              Entidad: <strong className="text-slate-300">{getEntityName(positionEntityId)}</strong>. El puesto se crea vacante y puede
-              ocuparse luego arrastrando una persona del Banco o eligiéndola directamente en su tarjeta.
+              Entidad: <strong className="text-slate-300">{getEntityName(positionEntityId)}</strong>. Puedes dejarlo vacante o asignar
+              una persona directamente al guardar.
             </p>
 
             <div className="grid gap-4">
@@ -4166,6 +4161,19 @@ export default function App() {
                 >
                   {FTE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-bold text-slate-400">
+                Persona asignada
+                <select
+                  value={positionForm.assignedPersonId}
+                  onChange={(event) => setPositionForm({ ...positionForm, assignedPersonId: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                >
+                  <option value="">-- Vacante (Asignar después) --</option>
+                  {board.people.map((person) => (
+                    <option key={person.id} value={person.id}>{person.name}</option>
                   ))}
                 </select>
               </label>
