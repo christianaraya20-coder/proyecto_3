@@ -43,6 +43,7 @@ import {
   Presentation,
   Search,
   Sun,
+  Tags,
   Trash2,
   Upload,
   User,
@@ -619,12 +620,76 @@ function RoleBadge({ role }: { role: RoleType }) {
   );
 }
 
-function PersonBadges({ person, limit }: { person: Person; limit?: number }) {
+// Two modes:
+// - Interactive (`showToggle`): collapsed by default to a single primary badge
+//   (first skill, else first tag) plus a "+N más" pill that expands/collapses
+//   the rest — skills, tags and the supervisor line — on click. Driven by the
+//   `expanded` flag lifted to App so a global header toggle and per-card clicks
+//   share the same state.
+// - Static (`limit`, no `showToggle`): the original fixed truncation, kept for
+//   contexts where a nested toggle button isn't valid (e.g. the Mind Map's
+//   person entries, which are themselves buttons) or a full always-on listing
+//   (the person detail panel, `limit` omitted).
+function PersonBadges({
+  person,
+  limit,
+  expanded = true,
+  onToggleExpand,
+  showToggle = false,
+}: {
+  person: Person;
+  limit?: number;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
+  showToggle?: boolean;
+}) {
   const skills = person.skills || [];
   const tags = person.customTags || [];
+  const hasSupervisor = Boolean(person.supervisor);
   const totalBadges = skills.length + tags.length;
+  const totalItems = totalBadges + (hasSupervisor ? 1 : 0);
 
-  if (totalBadges === 0 && !person.supervisor) return null;
+  if (totalItems === 0) return null;
+
+  const canToggle = showToggle && totalItems > 1;
+  const isCollapsed = canToggle && !expanded;
+
+  const toggleControl = canToggle ? (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggleExpand?.();
+      }}
+      className="inline-flex items-center gap-0.5 rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-[9px] font-bold text-slate-300 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
+      title={isCollapsed ? 'Mostrar todas las etiquetas' : 'Colapsar etiquetas'}
+    >
+      {isCollapsed ? `+${totalItems - 1} más` : 'Menos'}
+      {isCollapsed ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronUp className="h-2.5 w-2.5" />}
+    </button>
+  ) : null;
+
+  if (isCollapsed) {
+    const firstSkill = skills[0];
+    const firstTag = !firstSkill ? tags[0] : undefined;
+    const firstTagColors = firstTag ? getTagColorStyle(firstTag.color) : null;
+
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 transition-all duration-200">
+        {firstSkill && (
+          <span className="inline-flex items-center rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[9px] font-bold text-indigo-800 dark:border-indigo-700 dark:bg-indigo-900/80 dark:text-indigo-200">
+            {firstSkill}
+          </span>
+        )}
+        {!firstSkill && firstTag && firstTagColors && (
+          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-bold ${firstTagColors.bg} ${firstTagColors.border} ${firstTagColors.text}`}>
+            {firstTag.label}
+          </span>
+        )}
+        {toggleControl}
+      </div>
+    );
+  }
 
   const visibleSkillCount = limit === undefined ? skills.length : Math.min(skills.length, limit);
   const visibleTagCount = limit === undefined ? tags.length : Math.max(0, Math.min(tags.length, limit - visibleSkillCount));
@@ -633,7 +698,7 @@ function PersonBadges({ person, limit }: { person: Person; limit?: number }) {
   const hiddenCount = totalBadges - visibleSkills.length - visibleTags.length;
 
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 transition-all duration-200">
       {visibleSkills.map((skill) => (
         <span
           key={skill}
@@ -660,6 +725,7 @@ function PersonBadges({ person, limit }: { person: Person; limit?: number }) {
           Supervisa: {person.supervisor}
         </span>
       )}
+      {toggleControl}
     </div>
   );
 }
@@ -673,9 +739,11 @@ function PersonCard({
   connectionMode = false,
   readOnly = false,
   highlighted = false,
+  badgesExpanded = false,
   onOpen,
   onConnect,
   onHover,
+  onToggleBadges,
 }: {
   person: Person;
   searchQuery: string;
@@ -685,9 +753,11 @@ function PersonCard({
   connectionMode?: boolean;
   readOnly?: boolean;
   highlighted?: boolean;
+  badgesExpanded?: boolean;
   onOpen: (person: Person) => void;
   onConnect: (person: Person) => void;
   onHover?: (personId: string | null) => void;
+  onToggleBadges?: (personId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `person:${person.id}`,
@@ -763,7 +833,14 @@ function PersonCard({
           </span>
         </div>
       )}
-      <PersonBadges person={person} limit={compact || dense ? 2 : undefined} />
+      {!compact && (
+        <PersonBadges
+          person={person}
+          showToggle
+          expanded={badgesExpanded}
+          onToggleExpand={() => onToggleBadges?.(person.id)}
+        />
+      )}
     </div>
   );
 }
@@ -780,11 +857,13 @@ function AssignmentCard({
   highlighted = false,
   canMoveUp,
   canMoveDown,
+  badgesExpanded = false,
   onOpen,
   onConnect,
   onRemoveAssignment,
   onMoveAssignment,
   onHover,
+  onToggleBadges,
 }: {
   assignment: Assignment;
   person: Person;
@@ -797,11 +876,13 @@ function AssignmentCard({
   highlighted?: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  badgesExpanded?: boolean;
   onOpen: (person: Person) => void;
   onConnect: (person: Person) => void;
   onRemoveAssignment: (assignmentId: string) => void;
   onMoveAssignment: (assignmentId: string, direction: 'up' | 'down') => void;
   onHover?: (personId: string | null) => void;
+  onToggleBadges?: (personId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `assignment:${assignment.id}`,
@@ -916,7 +997,14 @@ function AssignmentCard({
           </span>
         </div>
       )}
-      <PersonBadges person={person} limit={compact || dense ? 2 : undefined} />
+      {!compact && (
+        <PersonBadges
+          person={person}
+          showToggle
+          expanded={badgesExpanded}
+          onToggleExpand={() => onToggleBadges?.(person.id)}
+        />
+      )}
     </div>
   );
 }
@@ -1138,6 +1226,7 @@ function EntityColumn({
   readOnly = false,
   canMoveLeft,
   canMoveRight,
+  expandedPersonIds,
   onOpenPerson,
   onConnect,
   onHoverPerson,
@@ -1152,6 +1241,7 @@ function EntityColumn({
   onAssignPosition,
   onUnassignPosition,
   onReorderPosition,
+  onToggleBadges,
 }: {
   entity: BoardEntity;
   assignments: Assignment[];
@@ -1165,6 +1255,7 @@ function EntityColumn({
   readOnly?: boolean;
   canMoveLeft: boolean;
   canMoveRight: boolean;
+  expandedPersonIds: Set<string>;
   onOpenPerson: (person: Person) => void;
   onConnect: (person: Person) => void;
   onHoverPerson: (personId: string | null) => void;
@@ -1179,6 +1270,7 @@ function EntityColumn({
   onAssignPosition: (entityId: string, positionId: string, personId: string, fte: number) => void;
   onUnassignPosition: (entityId: string, positionId: string) => void;
   onReorderPosition: (entityId: string, activePositionId: string, overPositionId: string) => void;
+  onToggleBadges: (personId: string) => void;
 }) {
   const positions = entity.positions || [];
   const { setNodeRef, isOver } = useDroppable({ id: `entity:${entity.id}` });
@@ -1361,11 +1453,13 @@ function EntityColumn({
                     readOnly={readOnly}
                     canMoveUp={assignmentIndex > 0}
                     canMoveDown={assignmentIndex < assignments.length - 1}
+                    badgesExpanded={expandedPersonIds.has(person.id)}
                     onOpen={onOpenPerson}
                     onConnect={onConnect}
                     onRemoveAssignment={onRemoveAssignment}
                     onMoveAssignment={moveAssignment}
                     onHover={onHoverPerson}
+                    onToggleBadges={onToggleBadges}
                   />
                 );
               })}
@@ -1488,12 +1582,14 @@ function BankPersonEntry({
   readOnly,
   entities,
   assignedEntityIds,
+  badgesExpanded,
   onOpenPerson,
   onConnect,
   onHoverPerson,
   onEditPerson,
   onDeletePerson,
   onAssign,
+  onToggleBadges,
 }: {
   person: Person;
   searchQuery: string;
@@ -1503,12 +1599,14 @@ function BankPersonEntry({
   readOnly: boolean;
   entities: BoardEntity[];
   assignedEntityIds: Set<string>;
+  badgesExpanded: boolean;
   onOpenPerson: (person: Person) => void;
   onConnect: (person: Person) => void;
   onHoverPerson: (personId: string | null) => void;
   onEditPerson: (person: Person) => void;
   onDeletePerson: (personId: string) => void;
   onAssign: (personId: string, entityId: string) => void;
+  onToggleBadges: (personId: string) => void;
 }) {
   const assignableEntities = useMemo(
     () => entities.filter((entity) => !assignedEntityIds.has(entity.id)),
@@ -1531,9 +1629,11 @@ function BankPersonEntry({
         highlighted={hoveredPersonId === person.id}
         connectionMode={connectionMode}
         readOnly={readOnly}
+        badgesExpanded={badgesExpanded}
         onOpen={onOpenPerson}
         onConnect={onConnect}
         onHover={onHoverPerson}
+        onToggleBadges={onToggleBadges}
       />
       {!readOnly && (
         <div className="mt-1.5 flex items-center gap-1.5 px-0.5">
@@ -1602,6 +1702,7 @@ function BankDrawer({
   readOnly,
   entities,
   assignments,
+  expandedPersonIds,
   onOpenPerson,
   onConnect,
   onHoverPerson,
@@ -1609,6 +1710,7 @@ function BankDrawer({
   onDeletePerson,
   onAssignPerson,
   onOpenNewPerson,
+  onToggleBadges,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -1627,6 +1729,7 @@ function BankDrawer({
   readOnly: boolean;
   entities: BoardEntity[];
   assignments: Assignment[];
+  expandedPersonIds: Set<string>;
   onOpenPerson: (person: Person) => void;
   onConnect: (person: Person) => void;
   onHoverPerson: (personId: string | null) => void;
@@ -1634,6 +1737,7 @@ function BankDrawer({
   onDeletePerson: (personId: string) => void;
   onAssignPerson: (personId: string, entityId: string) => void;
   onOpenNewPerson: () => void;
+  onToggleBadges: (personId: string) => void;
 }) {
   if (!isOpen) return null;
 
@@ -1730,12 +1834,14 @@ function BankDrawer({
                   readOnly={readOnly}
                   entities={entities}
                   assignedEntityIds={assignedEntityIds}
+                  badgesExpanded={expandedPersonIds.has(person.id)}
                   onOpenPerson={onOpenPerson}
                   onConnect={onConnect}
                   onHoverPerson={onHoverPerson}
                   onEditPerson={onEditPerson}
                   onDeletePerson={onDeletePerson}
                   onAssign={onAssignPerson}
+                  onToggleBadges={onToggleBadges}
                 />
               );
             })
@@ -2109,6 +2215,10 @@ export default function App() {
   const [editingPositionId, setEditingPositionId] = useState<string | null>(null);
   const [positionEntityId, setPositionEntityId] = useState('');
   const [manualAssignEntityId, setManualAssignEntityId] = useState('');
+  // Cards render skills/tags/supervisor collapsed to a single primary badge by
+  // default; a person's id lands here only while its card is individually or
+  // globally expanded to the full list.
+  const [expandedPersonIds, setExpandedPersonIds] = useState<Set<string>>(new Set());
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [connectionLines, setConnectionLines] = useState<ConnectionLine[]>([]);
   const [connectionCanvasSize, setConnectionCanvasSize] = useState({ width: 0, height: 0 });
@@ -2241,6 +2351,11 @@ export default function App() {
     };
   }, [board]);
 
+  const isAllBadgesExpanded = useMemo(
+    () => board.people.length > 0 && board.people.every((person) => expandedPersonIds.has(person.id)),
+    [board.people, expandedPersonIds]
+  );
+
   const connectionColor = theme === 'light' ? '#0369a1' : '#38bdf8';
   const connectionActiveColor = theme === 'light' ? '#0f172a' : '#67e8f9';
   const connectionTextColor = theme === 'light' ? '#0c4a6e' : '#bae6fd';
@@ -2356,7 +2471,7 @@ export default function App() {
       window.removeEventListener('scroll', handleRefresh, true);
       observer.disconnect();
     };
-  }, [board.assignments, board.entities, collapsedLevels, filteredPeople, fitToScreen, isBankDrawerOpen, refreshConnectionLines, visibleEntities]);
+  }, [board.assignments, board.entities, collapsedLevels, expandedPersonIds, filteredPeople, fitToScreen, isBankDrawerOpen, refreshConnectionLines, visibleEntities]);
 
   // Lock background scroll while the Bank drawer is open, and recalculate the
   // connection SVG right after it opens/closes since that toggle can shift the
@@ -2370,6 +2485,27 @@ export default function App() {
 
   const toggleLevelCollapsed = (type: EntityType) => {
     setCollapsedLevels((prev) => ({ ...prev, [type]: !prev[type] }));
+  };
+
+  // Expands/collapses a single person's badges, independent of every other card.
+  const handleTogglePersonBadges = (personId: string) => {
+    setExpandedPersonIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(personId)) next.delete(personId);
+      else next.add(personId);
+      return next;
+    });
+  };
+
+  // Header switch: forces every card on the board to the same state at once.
+  const handleToggleAllBadges = () => {
+    if (isAllBadgesExpanded) {
+      setExpandedPersonIds(new Set());
+      showToast('Etiquetas colapsadas en todo el tablero.', 'info');
+    } else {
+      setExpandedPersonIds(new Set(board.people.map((person) => person.id)));
+      showToast('Etiquetas expandidas en todo el tablero.', 'info');
+    }
   };
 
   const openNewPersonModal = () => {
@@ -3151,6 +3287,19 @@ export default function App() {
               </button>
               <button
                 type="button"
+                onClick={handleToggleAllBadges}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
+                  isAllBadgesExpanded
+                    ? 'border-indigo-400 bg-indigo-400 text-slate-950'
+                    : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
+                }`}
+                title="Expandir o colapsar las etiquetas de todas las tarjetas del tablero"
+              >
+                <Tags className="h-3.5 w-3.5" />
+                Etiquetas: {isAllBadgesExpanded ? 'Mostrar Todas' : '1 Principal'}
+              </button>
+              <button
+                type="button"
                 onClick={() => setFitToScreen((prev) => !prev)}
                 className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
                   fitToScreen
@@ -3409,6 +3558,7 @@ export default function App() {
                                   readOnly={isPresentationMode}
                                   canMoveLeft={entityIndex > 0}
                                   canMoveRight={entityIndex < levelEntities.length - 1}
+                                  expandedPersonIds={expandedPersonIds}
                                   onOpenPerson={(person) => setSelectedPersonId(person.id)}
                                   onConnect={handleConnectPerson}
                                   onHoverPerson={setHoveredPersonId}
@@ -3423,6 +3573,7 @@ export default function App() {
                                   onAssignPosition={handleAssignPersonToPosition}
                                   onUnassignPosition={handleUnassignPosition}
                                   onReorderPosition={handleReorderPosition}
+                                  onToggleBadges={handleTogglePersonBadges}
                                 />
                               </div>
                             );
@@ -3467,6 +3618,7 @@ export default function App() {
         readOnly={isPresentationMode}
         entities={orderedEntities}
         assignments={board.assignments}
+        expandedPersonIds={expandedPersonIds}
         onOpenPerson={(person) => setSelectedPersonId(person.id)}
         onConnect={handleConnectPerson}
         onHoverPerson={setHoveredPersonId}
@@ -3474,6 +3626,7 @@ export default function App() {
         onDeletePerson={handleDeletePerson}
         onAssignPerson={handleAssignPersonToEntity}
         onOpenNewPerson={openNewPersonModal}
+        onToggleBadges={handleTogglePersonBadges}
       />
 
       <MindMapModal
