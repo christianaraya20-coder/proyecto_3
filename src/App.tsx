@@ -822,84 +822,6 @@ function EntityColumn({
   );
 }
 
-function BankColumn({
-  people,
-  searchQuery,
-  compact,
-  dense,
-  collapsed,
-  readOnly,
-  selectedConnectionPersonId,
-  connectionMode,
-  onToggleCollapsed,
-  onOpenPerson,
-  onConnect,
-}: {
-  people: Person[];
-  searchQuery: string;
-  compact: boolean;
-  dense: boolean;
-  collapsed: boolean;
-  readOnly: boolean;
-  selectedConnectionPersonId: string | null;
-  connectionMode: boolean;
-  onToggleCollapsed: () => void;
-  onOpenPerson: (person: Person) => void;
-  onConnect: (person: Person) => void;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: 'bank' });
-
-  return (
-    <section
-      ref={setNodeRef}
-      className={`z-30 flex h-auto shrink-0 flex-col overflow-hidden rounded-2xl border-2 bg-slate-950/80 backdrop-blur-md transition-all ${
-        collapsed ? 'w-[56px] min-w-[56px]' : `min-w-[280px] w-[280px] ${dense ? '' : 'snap-start'}`
-      } ${isOver ? 'border-red-400 shadow-[0_0_24px_rgba(248,113,113,0.24)]' : 'border-slate-800'}`}
-    >
-      <header className={`flex items-start justify-between gap-2 border-b border-slate-800 ${collapsed ? 'p-2' : 'p-3'}`}>
-        {!collapsed && (
-          <div className="min-w-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
-              <Users className="h-3 w-3" />
-              Banco
-            </span>
-            <h3 className="mt-2 font-display text-lg font-extrabold text-white">Personas disponibles</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Arrastra a cualquier columna. Suelta aquÃ­ una asignaciÃ³n para quitarla de su entidad.
-            </p>
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={onToggleCollapsed}
-          className="shrink-0 rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200"
-          title={collapsed ? 'Expandir banco de personas' : 'Colapsar banco de personas'}
-        >
-          {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
-        </button>
-      </header>
-      {!collapsed && (
-        <div className="space-y-2 overflow-visible p-2.5">
-          {people.map((person) => (
-            <PersonCard
-              key={person.id}
-              person={person}
-              searchQuery={searchQuery}
-              compact={compact}
-              dense={dense}
-              selected={selectedConnectionPersonId === person.id}
-              connectionMode={connectionMode}
-              readOnly={readOnly}
-              onOpen={onOpenPerson}
-              onConnect={onConnect}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
 function HoldingCard({
   member,
   icon: Icon,
@@ -999,6 +921,264 @@ function HoldingColumn({
   );
 }
 
+// A row inside the Bank drawer: the standard PersonCard plus direct edit/delete
+// actions and a quick-assign selector, so assigning someone to an entity doesn't
+// require dragging (impossible anyway while the drawer overlays the board).
+function BankPersonEntry({
+  person,
+  searchQuery,
+  connectionMode,
+  selectedConnectionPersonId,
+  readOnly,
+  entities,
+  assignedEntityIds,
+  onOpenPerson,
+  onConnect,
+  onEditPerson,
+  onDeletePerson,
+  onAssign,
+}: {
+  person: Person;
+  searchQuery: string;
+  connectionMode: boolean;
+  selectedConnectionPersonId: string | null;
+  readOnly: boolean;
+  entities: BoardEntity[];
+  assignedEntityIds: Set<string>;
+  onOpenPerson: (person: Person) => void;
+  onConnect: (person: Person) => void;
+  onEditPerson: (person: Person) => void;
+  onDeletePerson: (personId: string) => void;
+  onAssign: (personId: string, entityId: string) => void;
+}) {
+  const assignableEntities = useMemo(
+    () => entities.filter((entity) => !assignedEntityIds.has(entity.id)),
+    [entities, assignedEntityIds]
+  );
+  const [selectedEntityId, setSelectedEntityId] = useState(assignableEntities[0]?.id || '');
+
+  useEffect(() => {
+    if (!assignableEntities.some((entity) => entity.id === selectedEntityId)) {
+      setSelectedEntityId(assignableEntities[0]?.id || '');
+    }
+  }, [assignableEntities, selectedEntityId]);
+
+  return (
+    <div className="rounded-xl border border-slate-800/60 bg-slate-900/30 p-1.5">
+      <PersonCard
+        person={person}
+        searchQuery={searchQuery}
+        selected={selectedConnectionPersonId === person.id}
+        connectionMode={connectionMode}
+        readOnly={readOnly}
+        onOpen={onOpenPerson}
+        onConnect={onConnect}
+      />
+      {!readOnly && (
+        <div className="mt-1.5 flex items-center gap-1.5 px-0.5">
+          <button
+            type="button"
+            onClick={() => onEditPerson(person)}
+            className="shrink-0 rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-400 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
+            title="Editar persona"
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDeletePerson(person.id)}
+            className="shrink-0 rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-400 transition-colors hover:border-red-400/50 hover:text-red-300"
+            title="Eliminar persona"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+          {assignableEntities.length > 0 ? (
+            <>
+              <select
+                value={selectedEntityId}
+                onChange={(event) => setSelectedEntityId(event.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 outline-none focus:border-emerald-500"
+              >
+                {assignableEntities.map((entity) => (
+                  <option key={entity.id} value={entity.id}>
+                    {entity.name} · {ENTITY_META[entity.type].label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => selectedEntityId && onAssign(person.id, selectedEntityId)}
+                className="shrink-0 rounded-lg border border-emerald-500/40 bg-emerald-950/30 p-1.5 text-emerald-300 transition-colors hover:bg-emerald-950/50"
+                title="Asignar a la entidad seleccionada"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : (
+            <span className="flex-1 truncate text-[10px] text-slate-500">Ya participa en todas las entidades.</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BankDrawer({
+  isOpen,
+  onClose,
+  people,
+  totalCount,
+  searchQuery,
+  onSearchChange,
+  roleFilter,
+  onRoleFilterChange,
+  categoryFilter,
+  onCategoryFilterChange,
+  categoryOptions,
+  connectionMode,
+  selectedConnectionPersonId,
+  readOnly,
+  entities,
+  assignments,
+  onOpenPerson,
+  onConnect,
+  onEditPerson,
+  onDeletePerson,
+  onAssignPerson,
+  onOpenNewPerson,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  people: Person[];
+  totalCount: number;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  roleFilter: 'Todos' | RoleType;
+  onRoleFilterChange: (value: 'Todos' | RoleType) => void;
+  categoryFilter: string;
+  onCategoryFilterChange: (value: string) => void;
+  categoryOptions: string[];
+  connectionMode: boolean;
+  selectedConnectionPersonId: string | null;
+  readOnly: boolean;
+  entities: BoardEntity[];
+  assignments: Assignment[];
+  onOpenPerson: (person: Person) => void;
+  onConnect: (person: Person) => void;
+  onEditPerson: (person: Person) => void;
+  onDeletePerson: (personId: string) => void;
+  onAssignPerson: (personId: string, entityId: string) => void;
+  onOpenNewPerson: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[75] bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
+      <aside className="fixed inset-y-0 left-0 z-[76] flex w-full max-w-md flex-col border-r border-slate-800 bg-slate-950/95 shadow-2xl backdrop-blur-xl">
+        <header className="shrink-0 border-b border-slate-800 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <Users className="h-3 w-3" />
+                Banco de Personas
+              </span>
+              <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-white">Equipo disponible</h2>
+              <p className="mt-1 text-xs text-slate-500">{totalCount} personas registradas. Asígnalas directamente a cualquier entidad sin arrastrar.</p>
+            </div>
+            <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-slate-900 hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={onOpenNewPerson}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white shadow-md transition-colors hover:bg-indigo-500"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Agregar persona
+            </button>
+          )}
+
+          <div className="mt-4 grid gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <input
+                value={searchQuery}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder="Buscar por nombre, rol, categoría, nota o contacto..."
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-9 pr-3 text-xs text-slate-200 outline-none transition focus:border-indigo-500"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-2">
+                <Filter className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                <select
+                  value={roleFilter}
+                  onChange={(event) => onRoleFilterChange(event.target.value as 'Todos' | RoleType)}
+                  className="w-full min-w-0 bg-transparent text-[11px] font-semibold text-slate-200 outline-none"
+                >
+                  <option value="Todos" className="bg-slate-950">Todos los roles</option>
+                  {ROLE_OPTIONS.map((role) => (
+                    <option key={role} value={role} className="bg-slate-950">{role}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-2">
+                <Filter className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                <select
+                  value={categoryFilter}
+                  onChange={(event) => onCategoryFilterChange(event.target.value)}
+                  className="w-full min-w-0 bg-transparent text-[11px] font-semibold text-slate-200 outline-none"
+                >
+                  <option value="Todas" className="bg-slate-950">Todas las categorías</option>
+                  {categoryOptions.map((category) => (
+                    <option key={category} value={category} className="bg-slate-950">{category}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
+          {people.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-500">
+              Ninguna persona coincide con la búsqueda o los filtros aplicados.
+            </p>
+          ) : (
+            people.map((person) => {
+              const assignedEntityIds = new Set(
+                assignments.filter((assignment) => assignment.personId === person.id).map((assignment) => assignment.entityId)
+              );
+
+              return (
+                <BankPersonEntry
+                  key={person.id}
+                  person={person}
+                  searchQuery={searchQuery}
+                  connectionMode={connectionMode}
+                  selectedConnectionPersonId={selectedConnectionPersonId}
+                  readOnly={readOnly}
+                  entities={entities}
+                  assignedEntityIds={assignedEntityIds}
+                  onOpenPerson={onOpenPerson}
+                  onConnect={onConnect}
+                  onEditPerson={onEditPerson}
+                  onDeletePerson={onDeletePerson}
+                  onAssign={onAssignPerson}
+                />
+              );
+            })
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
+
 export default function App() {
   const [board, setBoard] = useState<BoardState>(loadState);
   const [theme, setTheme] = useState<ThemeMode>(loadTheme);
@@ -1007,7 +1187,8 @@ export default function App() {
   const [entityTypeFilter, setEntityTypeFilter] = useState<'todos' | EntityType>('todos');
   const [compactMode, setCompactMode] = useState(false);
   const [fitToScreen, setFitToScreen] = useState(false);
-  const [bankCollapsed, setBankCollapsed] = useState(false);
+  const [isBankDrawerOpen, setIsBankDrawerOpen] = useState(false);
+  const [bankCategoryFilter, setBankCategoryFilter] = useState('Todas');
   const [collapsedLevels, setCollapsedLevels] = useState<Record<EntityType, boolean>>({
     empresa: false,
     proyecto: false,
@@ -1125,6 +1306,18 @@ export default function App() {
   }, [visibleEntities]);
 
   const filteredPersonIds = useMemo(() => new Set(filteredPeople.map((person) => person.id)), [filteredPeople]);
+
+  // Categories are free text on each Person, so the drawer's filter options are
+  // derived from whatever categories are actually in use.
+  const bankCategoryOptions = useMemo(() => {
+    const categories = new Set(board.people.map((person) => person.category).filter(Boolean));
+    return Array.from(categories).sort((a, b) => a.localeCompare(b, 'es'));
+  }, [board.people]);
+
+  const bankDrawerPeople = useMemo(() => {
+    if (bankCategoryFilter === 'Todas') return filteredPeople;
+    return filteredPeople.filter((person) => person.category === bankCategoryFilter);
+  }, [bankCategoryFilter, filteredPeople]);
 
   const stats = useMemo(() => {
     return {
@@ -1244,7 +1437,17 @@ export default function App() {
       window.removeEventListener('scroll', handleRefresh, true);
       observer.disconnect();
     };
-  }, [bankCollapsed, board.assignments, collapsedLevels, filteredPeople, fitToScreen, refreshConnectionLines, visibleEntities]);
+  }, [board.assignments, collapsedLevels, filteredPeople, fitToScreen, isBankDrawerOpen, refreshConnectionLines, visibleEntities]);
+
+  // Lock background scroll while the Bank drawer is open, and recalculate the
+  // connection SVG right after it opens/closes since that toggle can shift the
+  // page's scrollbar and therefore the board's measured position.
+  useEffect(() => {
+    document.body.style.overflow = isBankDrawerOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isBankDrawerOpen]);
 
   const toggleLevelCollapsed = (type: EntityType) => {
     setCollapsedLevels((prev) => ({ ...prev, [type]: !prev[type] }));
@@ -1528,7 +1731,6 @@ export default function App() {
   const handleDragEnd = (event: DragEndEvent) => {
     const activeType = event.active.data.current?.type as string | undefined;
     const personId = event.active.data.current?.personId as string | undefined;
-    const assignmentId = event.active.data.current?.assignmentId as string | undefined;
     const overId = String(event.over?.id || '');
     setActivePersonId(null);
 
@@ -1538,11 +1740,6 @@ export default function App() {
       if (sourceEntityId && targetEntityId && reorderEntity(sourceEntityId, targetEntityId)) {
         showToast('Orden de columnas actualizado.', 'success');
       }
-      return;
-    }
-
-    if (activeType === 'assignment' && assignmentId && overId === 'bank') {
-      handleRemoveAssignment(assignmentId);
       return;
     }
 
@@ -1702,6 +1899,16 @@ export default function App() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsBankDrawerOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-200 shadow-md transition-colors hover:border-slate-700"
+                title="Abrir el banco de personas"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Banco de Personas
+                <span className="rounded-full bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-extrabold text-indigo-300">{board.people.length}</span>
+              </button>
               {!isPresentationMode && (
                 <button
                   type="button"
@@ -1889,7 +2096,7 @@ export default function App() {
 
       <main className={fitToScreen ? 'w-full px-3 py-5' : 'mx-auto max-w-[1800px] px-4 py-5 lg:px-6'}>
         <div className="mb-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-4 text-xs leading-relaxed text-slate-400">
-          <strong className="text-slate-200">Estructura jerárquica:</strong> la Cúpula Directiva y el Banco quedan fijos arriba; debajo, cada nivel (Empresas → Proyectos → Licitaciones → Tareas) tiene su propia fila. Arrastra personas entre cualquier tarjeta, reordena columnas dentro de su fila y colapsa niveles con la flecha para enfocar la vista.
+          <strong className="text-slate-200">Estructura jerárquica:</strong> la Cúpula Directiva queda fija arriba; debajo, cada nivel (Empresas → Proyectos → Licitaciones → Tareas) tiene su propia fila a todo el ancho. Abre "Banco de Personas" en el header para buscar, editar o asignar directamente a cualquier entidad, reordena columnas dentro de su fila y colapsa niveles con la flecha para enfocar la vista.
         </div>
 
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -1927,25 +2134,9 @@ export default function App() {
               })}
             </svg>
 
-            {/* Fila fija superior: Cúpula Directiva + Banco de Personas */}
-            <div className={fitToScreen ? 'overflow-x-hidden' : 'overflow-x-auto pb-1'}>
-              <div className={`relative z-30 flex gap-4 ${fitToScreen ? 'w-full' : 'min-w-max snap-x'}`}>
-                <HoldingColumn members={board.holdingMembers} fitMode={fitToScreen} readOnly={isPresentationMode} onEditMember={openEditHoldingModal} />
-
-                <BankColumn
-                  people={filteredPeople}
-                  searchQuery={searchQuery}
-                  compact={compactMode}
-                  dense={fitToScreen}
-                  collapsed={bankCollapsed}
-                  readOnly={isPresentationMode}
-                  selectedConnectionPersonId={selectedConnectionPersonId}
-                  connectionMode={connectionMode}
-                  onToggleCollapsed={() => setBankCollapsed((prev) => !prev)}
-                  onOpenPerson={(nextPerson) => setSelectedPersonId(nextPerson.id)}
-                  onConnect={handleConnectPerson}
-                />
-              </div>
+            {/* Fila fija superior: Cúpula Directiva (el Banco de Personas vive en su panel desplegable) */}
+            <div className="relative z-30 flex gap-4">
+              <HoldingColumn members={board.holdingMembers} fitMode={fitToScreen} readOnly={isPresentationMode} onEditMember={openEditHoldingModal} />
             </div>
 
             {/* Niveles jerárquicos: Empresas -> Proyectos -> Licitaciones -> Tareas */}
@@ -2035,6 +2226,31 @@ export default function App() {
           </DragOverlay>
         </DndContext>
       </main>
+
+      <BankDrawer
+        isOpen={isBankDrawerOpen}
+        onClose={() => setIsBankDrawerOpen(false)}
+        people={bankDrawerPeople}
+        totalCount={board.people.length}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        roleFilter={roleFilter}
+        onRoleFilterChange={setRoleFilter}
+        categoryFilter={bankCategoryFilter}
+        onCategoryFilterChange={setBankCategoryFilter}
+        categoryOptions={bankCategoryOptions}
+        connectionMode={connectionMode}
+        selectedConnectionPersonId={selectedConnectionPersonId}
+        readOnly={isPresentationMode}
+        entities={orderedEntities}
+        assignments={board.assignments}
+        onOpenPerson={(person) => setSelectedPersonId(person.id)}
+        onConnect={handleConnectPerson}
+        onEditPerson={openEditPersonModal}
+        onDeletePerson={handleDeletePerson}
+        onAssignPerson={handleAssignPersonToEntity}
+        onOpenNewPerson={openNewPersonModal}
+      />
 
       {selectedPerson && (
         <aside className="fixed inset-y-0 right-0 z-[80] flex w-full max-w-xl flex-col border-l border-slate-800 bg-slate-950/95 shadow-2xl backdrop-blur-xl">
