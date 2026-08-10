@@ -57,6 +57,7 @@ import {
   User,
   UserMinus,
   Users,
+  Workflow,
   X,
 } from 'lucide-react';
 
@@ -254,6 +255,53 @@ const ROLE_BADGES: Record<RoleType, { bg: string; border: string; text: string; 
 };
 
 const ROLE_OPTIONS = Object.keys(ROLE_BADGES) as RoleType[];
+
+type FunctionalAreaKey = 'admin' | 'arquitectura' | 'producto' | 'operativo';
+
+// Groups the Holding's RoleType values into the functional areas shown by the
+// "Organigrama por Áreas" view. Every RoleType must land in exactly one area —
+// Cúpula & Dirección General is rendered separately from `holdingMembers`
+// (Damir Solar, Rafael Valenzuela), not from `board.people`.
+const FUNCTIONAL_AREAS: { key: FunctionalAreaKey; title: string; roles: RoleType[] }[] = [
+  { key: 'admin', title: 'Administrativo, Finanzas y RRHH', roles: ['Administrativo', 'Finanzas', 'RRHH', 'Legal'] },
+  { key: 'arquitectura', title: 'Arquitectura e ITO', roles: ['Arquitectura', 'Tecnología'] },
+  { key: 'producto', title: 'Producto & Management', roles: ['Management', 'Marketing', 'Ventas', 'Asesor'] },
+  { key: 'operativo', title: 'Operativo & Logística', roles: ['Operativo', 'Logística', 'Externo'] },
+];
+
+// Arranges a functional area's people into a flat, depth-annotated list so the
+// "Organigrama por Áreas" view can render manager -> report chains as an
+// indented tree without full SVG connector math. Cycle-safe: a managerId loop
+// just falls back to rendering the person at the root.
+function buildAreaTree(peopleInArea: Person[]): { person: Person; depth: number }[] {
+  const idsInArea = new Set(peopleInArea.map((person) => person.id));
+  const childrenByManager = new Map<string, Person[]>();
+  const roots: Person[] = [];
+
+  peopleInArea.forEach((person) => {
+    const managerInArea = person.managerId && idsInArea.has(person.managerId) ? person.managerId : null;
+    if (managerInArea) {
+      childrenByManager.set(managerInArea, [...(childrenByManager.get(managerInArea) || []), person]);
+    } else {
+      roots.push(person);
+    }
+  });
+
+  const result: { person: Person; depth: number }[] = [];
+  const visited = new Set<string>();
+  const walk = (person: Person, depth: number) => {
+    if (visited.has(person.id)) return;
+    visited.add(person.id);
+    result.push({ person, depth });
+    (childrenByManager.get(person.id) || []).forEach((child) => walk(child, depth + 1));
+  };
+  roots.forEach((person) => walk(person, 0));
+  peopleInArea.forEach((person) => {
+    if (!visited.has(person.id)) walk(person, 0);
+  });
+
+  return result;
+}
 
 // High-contrast pill colors for custom tags — same bg-100/dark:bg-900 formula as
 // ROLE_BADGES so tags stay legible in both Modo Claro and Modo Oscuro.
@@ -2890,6 +2938,265 @@ function PersonTaskSummaryModal({
   );
 }
 
+// A single person's card inside the "Organigrama por Áreas" view. Isolated as
+// its own component (rather than inlined in a `.map`) so it can hold its own
+// `useMemo` for the Holding-distribution chips without violating Rules of Hooks.
+function FunctionalOrgPersonCard({
+  person,
+  depth,
+  entities,
+  assignments,
+  managerName,
+  onOpenPerson,
+}: {
+  person: Person;
+  depth: number;
+  entities: BoardEntity[];
+  assignments: Assignment[];
+  managerName?: string;
+  onOpenPerson: (personId: string) => void;
+}) {
+  const distribution = useMemo(
+    () =>
+      entities
+        .map((entity) => {
+          const positions = (entity.positions || []).filter((position) => position.assignedPersonId === person.id);
+          const hasAssignment = assignments.some((assignment) => assignment.entityId === entity.id && assignment.personId === person.id);
+          if (positions.length === 0 && !hasAssignment) return null;
+          const fte = positions.reduce((sum, position) => sum + position.fte, 0);
+          return { entity, fte, hasPosition: positions.length > 0 };
+        })
+        .filter((entry): entry is { entity: BoardEntity; fte: number; hasPosition: boolean } => Boolean(entry)),
+    [assignments, entities, person.id]
+  );
+
+  return (
+    <div
+      style={{ marginLeft: depth * 16 }}
+      className={depth > 0 ? 'border-l-2 border-slate-200 pl-3 dark:border-slate-700' : undefined}
+    >
+      <button
+        type="button"
+        onClick={() => onOpenPerson(person.id)}
+        className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-cyan-500/60"
+        title="Ver hoja de funciones y tareas"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h4 className="truncate text-sm font-extrabold text-slate-950 dark:text-white">{person.name}</h4>
+            <p className="truncate text-[11px] font-bold text-slate-500 dark:text-slate-400">{person.category || person.role}</p>
+          </div>
+          <RoleBadge role={person.role} />
+        </div>
+        <ManagerLine managerName={managerName} dense />
+        {distribution.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {distribution.map(({ entity, fte, hasPosition }) => (
+              <span
+                key={entity.id}
+                className="inline-flex items-center rounded-full border border-cyan-300 bg-cyan-50 px-2 py-0.5 text-[9.5px] font-bold text-cyan-800 dark:border-cyan-700/60 dark:bg-cyan-950/40 dark:text-cyan-200"
+              >
+                {entity.name}
+                {hasPosition ? ` (${formatFte(fte)} FTE)` : ''}
+              </span>
+            ))}
+          </div>
+        )}
+      </button>
+    </div>
+  );
+}
+
+// Full-screen "Organigrama por Áreas": groups everyone in `board.people` into
+// their functional area (see FUNCTIONAL_AREAS), shows the Cúpula & Dirección
+// General column from `board.holdingMembers`, and renders "Reporta a" /
+// Holding-distribution chips read live from managerId / positions / assignments.
+function FunctionalOrgChartModal({
+  isOpen,
+  onClose,
+  people,
+  entities,
+  assignments,
+  holdingMembers,
+  onOpenPerson,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  people: Person[];
+  entities: BoardEntity[];
+  assignments: Assignment[];
+  holdingMembers: HoldingMember[];
+  onOpenPerson: (personId: string) => void;
+}) {
+  const [areaFilter, setAreaFilter] = useState<'all' | FunctionalAreaKey>('all');
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  const peopleById = useMemo(() => new Map(people.map((person) => [person.id, person])), [people]);
+
+  const areaColumns = useMemo(
+    () =>
+      FUNCTIONAL_AREAS.map((area) => ({
+        ...area,
+        entries: buildAreaTree(people.filter((person) => area.roles.includes(person.role))),
+      })),
+    [people]
+  );
+
+  if (!isOpen) return null;
+
+  const owner = holdingMembers.find((member) => member.level === 0) || {
+    id: 'holding-owner',
+    level: 0 as const,
+    name: 'Damir Solar',
+    role: 'Dueño',
+    notes: 'Radicado en el extranjero (10 meses al año)',
+  };
+
+  const advisor = holdingMembers.find((member) => member.level === 1) || {
+    id: 'holding-advisor',
+    level: 1 as const,
+    name: 'Rafael Valenzuela Munita',
+    role: 'Asesor Financiero y del Directorio',
+    notes: 'Nexo principal para la toma de decisiones del Holding',
+  };
+
+  const showDireccion = areaFilter === 'all';
+  const visibleAreas = areaFilter === 'all' ? areaColumns : areaColumns.filter((area) => area.key === areaFilter);
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div className="flex h-full flex-col">
+        <header className="shrink-0 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95">
+          <div className="mx-auto flex max-w-[1800px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-gradient-to-tr from-indigo-500 to-fuchsia-500 p-2.5 shadow-lg shadow-indigo-500/10">
+                <Workflow className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="font-display text-lg font-extrabold text-slate-950 dark:text-white">Organigrama Funcional</h2>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Personal agrupado por área, con líneas de reporte y distribución % FTE en el Holding.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                Área
+                <select
+                  value={areaFilter}
+                  onChange={(event) => setAreaFilter(event.target.value as 'all' | FunctionalAreaKey)}
+                  className="min-w-[220px] bg-transparent text-xs font-semibold text-slate-900 outline-none dark:text-slate-100"
+                >
+                  <option value="all" className="bg-white dark:bg-slate-950">Todas las áreas</option>
+                  {FUNCTIONAL_AREAS.map((area) => (
+                    <option key={area.key} value={area.key} className="bg-white dark:bg-slate-950">
+                      {area.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {areaFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setAreaFilter('all')}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+                >
+                  Limpiar filtro
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 shadow-sm hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-white"
+                aria-label="Cerrar organigrama por áreas"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-auto p-4 lg:p-6">
+          <div className={`mx-auto grid max-w-[1800px] gap-4 ${areaFilter === 'all' ? 'lg:grid-cols-5' : 'lg:max-w-2xl'}`}>
+            {showDireccion && (
+              <section className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-950/20">
+                <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-indigo-200 bg-white/70 px-3 py-2 dark:border-indigo-500/30 dark:bg-slate-950/40">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Crown className="h-4 w-4 shrink-0 text-indigo-700 dark:text-indigo-300" />
+                    <h3 className="truncate text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Cúpula &amp; Dirección General</h3>
+                  </div>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-indigo-700 dark:bg-slate-900 dark:text-indigo-300">2</span>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-indigo-200 bg-white p-3 shadow-sm dark:border-indigo-500/40 dark:bg-slate-900">
+                    <h4 className="text-sm font-extrabold text-slate-950 dark:text-white">{owner.name}</h4>
+                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{owner.role}</p>
+                    {owner.notes && <p className="mt-1 text-[10.5px] leading-relaxed text-slate-500 dark:text-slate-500">{owner.notes}</p>}
+                  </div>
+                  <div className="rounded-xl border border-indigo-200 bg-white p-3 shadow-sm dark:border-indigo-500/40 dark:bg-slate-900">
+                    <h4 className="text-sm font-extrabold text-slate-950 dark:text-white">{advisor.name}</h4>
+                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{advisor.role}</p>
+                    <ManagerLine managerName={owner.name} dense />
+                    {advisor.notes && <p className="mt-1 text-[10.5px] leading-relaxed text-slate-500 dark:text-slate-500">{advisor.notes}</p>}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {visibleAreas.map((area) => (
+              <section key={area.key} className="rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
+                <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white/70 px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40">
+                  <h3 className="truncate text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">{area.title}</h3>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                    {area.entries.length}
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {area.entries.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-4 text-center text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-500">
+                      Sin personas en esta área.
+                    </p>
+                  ) : (
+                    area.entries.map(({ person, depth }) => {
+                      const managerName = person.managerId ? peopleById.get(person.managerId)?.name : person.supervisor || undefined;
+                      return (
+                        <FunctionalOrgPersonCard
+                          key={person.id}
+                          person={person}
+                          depth={depth}
+                          entities={entities}
+                          assignments={assignments}
+                          managerName={managerName}
+                          onOpenPerson={onOpenPerson}
+                        />
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface CalendarEvent {
   id: string;
   date: string; // ISO YYYY-MM-DD
@@ -3280,6 +3587,7 @@ export default function App() {
   const [connectionMode, setConnectionMode] = useState(false);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
   const [isMindMapOpen, setIsMindMapOpen] = useState(false);
+  const [isFunctionalOrgChartOpen, setIsFunctionalOrgChartOpen] = useState(false);
   const [selectedConnectionPersonId, setSelectedConnectionPersonId] = useState<string | null>(null);
   const [hoveredPersonId, setHoveredPersonId] = useState<string | null>(null);
   const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null);
@@ -4689,6 +4997,15 @@ export default function App() {
               </button>
               <button
                 type="button"
+                onClick={() => setIsFunctionalOrgChartOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                title="Ver organigrama por áreas funcionales y distribución % FTE en el Holding"
+              >
+                <Workflow className="h-3.5 w-3.5" />
+                Organigrama por Áreas
+              </button>
+              <button
+                type="button"
                 onClick={() => setCompactMode((prev) => !prev)}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
               >
@@ -5070,6 +5387,16 @@ export default function App() {
         entitiesByLevel={entitiesByLevel}
         assignments={board.assignments}
         people={board.people}
+      />
+
+      <FunctionalOrgChartModal
+        isOpen={isFunctionalOrgChartOpen}
+        onClose={() => setIsFunctionalOrgChartOpen(false)}
+        people={board.people}
+        entities={orderedEntities}
+        assignments={board.assignments}
+        holdingMembers={board.holdingMembers}
+        onOpenPerson={openTaskSummary}
       />
 
       <PersonTaskSummaryModal
