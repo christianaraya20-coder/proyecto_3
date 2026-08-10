@@ -4,6 +4,7 @@ import {
   DragOverlay,
   PointerSensor,
   TouchSensor,
+  pointerWithin,
   useDraggable,
   useDroppable,
   useSensor,
@@ -83,6 +84,17 @@ interface Person {
   supervisor: string;
 }
 
+// SSoT: a Position (Puesto) belongs to an Entity and exists independently of any
+// Person. `assignedPersonId` is null while the position is vacant — the position
+// itself is never removed just because nobody currently occupies it.
+interface Position {
+  id: string;
+  title: string;
+  department: string;
+  fte: number; // fraction of full-time dedication, e.g. 1 = 100%, 0.5 = 50%
+  assignedPersonId: string | null;
+}
+
 interface BoardEntity {
   id: string;
   type: EntityType;
@@ -93,6 +105,7 @@ interface BoardEntity {
   budgetUsd?: string;
   closeDate?: string;
   status?: string;
+  positions?: Position[];
 }
 
 interface Assignment {
@@ -214,6 +227,19 @@ const TAG_COLOR_STYLES: Record<TagColorKey, { bg: string; border: string; text: 
 
 const TAG_COLOR_OPTIONS = Object.keys(TAG_COLOR_STYLES) as TagColorKey[];
 
+// Common FTE (Full-Time Equivalent) dedication levels offered when creating a
+// Position or assigning someone to one. Stored as a 0-1 fraction on Position.
+const FTE_OPTIONS: { value: number; label: string }[] = [
+  { value: 1, label: '100%' },
+  { value: 0.75, label: '75%' },
+  { value: 0.5, label: '50%' },
+  { value: 0.25, label: '25%' },
+];
+
+function formatFte(fte: number) {
+  return `${Math.round(fte * 100)}%`;
+}
+
 const SUGGESTED_TAGS = ['RRHH', 'Licitaciones', 'ITO', 'Dirección', 'Legal', 'Finanzas', 'Tecnología', 'Logística'];
 
 function getTagColorStyle(color: TagColorKey) {
@@ -324,8 +350,26 @@ const JULY_LICITATION_IDS = JULY_LICITATION_ENTITIES.map((entity) => entity.id);
 
 const INITIAL_STATE: BoardState = {
   entities: [
-    { id: 'entity-cramick', type: 'empresa', name: 'Cramick S.A.', description: 'Licitaciones de defensa y logística militar.' },
-    { id: 'entity-centurion', type: 'empresa', name: 'Centurion Armors SpA', description: 'Equipamiento táctico, blindaje y seguridad avanzada.' },
+    {
+      id: 'entity-cramick',
+      type: 'empresa',
+      name: 'Cramick S.A.',
+      description: 'Licitaciones de defensa y logística militar.',
+      positions: [
+        { id: 'pos-cramick-1', title: 'Jefe de Proyecto', department: 'Dirección', fte: 1, assignedPersonId: 'person-2' },
+        { id: 'pos-cramick-2', title: 'Encargado de Licitaciones', department: 'Comercial', fte: 0.5, assignedPersonId: null },
+      ],
+    },
+    {
+      id: 'entity-centurion',
+      type: 'empresa',
+      name: 'Centurion Armors SpA',
+      description: 'Equipamiento táctico, blindaje y seguridad avanzada.',
+      positions: [
+        { id: 'pos-centurion-1', title: 'Jefe de Compras', department: 'Operaciones', fte: 1, assignedPersonId: 'person-8' },
+        { id: 'pos-centurion-2', title: 'Analista de Contratos', department: 'Legal', fte: 0.25, assignedPersonId: null },
+      ],
+    },
     { id: 'entity-bedrock', type: 'empresa', name: 'Bedrock S.A.', description: 'Servicios gastronómicos y operaciones de restauración.' },
     { id: 'entity-alpha', type: 'proyecto', name: 'Proyecto Alpha', description: 'Mesa horizontal para coordinación transversal.' },
     ...JULY_LICITATION_ENTITIES,
@@ -412,17 +456,30 @@ function normalizePerson(person: Partial<Person> & { id: string; name: string })
   };
 }
 
-// `holdingMembers`, `entitiesOrder` and the extended Person fields were introduced
-// after boards were already saved/exported. Backfill them so older stored/imported
-// states keep working without losing data.
+// `positions` was introduced after entities were already saved/exported/JSON'd, and
+// FTE is only meaningful as a fraction in (0, 1]. Backfill/clamp so older or
+// hand-edited entities keep working.
+function normalizePosition(position: Partial<Position> & { id?: string }): Position {
+  return {
+    id: position.id || createId('position'),
+    title: typeof position.title === 'string' && position.title.trim() ? position.title : 'Puesto sin título',
+    department: typeof position.department === 'string' ? position.department : '',
+    fte: typeof position.fte === 'number' && position.fte > 0 && position.fte <= 1 ? position.fte : 1,
+    assignedPersonId: typeof position.assignedPersonId === 'string' ? position.assignedPersonId : null,
+  };
+}
+
+// `holdingMembers`, `entitiesOrder`, the extended Person fields and per-entity
+// `positions` were introduced after boards were already saved/exported. Backfill
+// them so older stored/imported states keep working without losing data.
 function normalizeBoardState(state: BoardState): BoardState {
   const persistedOrder = Array.isArray(state.entitiesOrder) ? state.entitiesOrder : [];
   const replacedLicitacionIds = new Set(['entity-ejercito', ...JULY_LICITATION_IDS]);
-  const entities = [
+  const rawEntities = [
     ...state.entities.filter((entity) => !replacedLicitacionIds.has(entity.id)),
     ...JULY_LICITATION_ENTITIES,
   ];
-  const existingEntityIds = new Set(entities.map((entity) => entity.id));
+  const existingEntityIds = new Set(rawEntities.map((entity) => entity.id));
   const orderWithoutReplacedLicitaciones = [
     ...(persistedOrder.length > 0 ? persistedOrder : state.entities.map((entity) => entity.id)),
   ].filter((entityId) => !replacedLicitacionIds.has(entityId) && existingEntityIds.has(entityId));
@@ -433,12 +490,27 @@ function normalizeBoardState(state: BoardState): BoardState {
     ...(taskIndex >= 0 ? orderWithoutReplacedLicitaciones.slice(taskIndex) : []),
   ];
 
+  const people = state.people.map(normalizePerson);
+  const peopleIds = new Set(people.map((person) => person.id));
+  const entities = rawEntities.map((entity) => ({
+    ...entity,
+    positions: (Array.isArray(entity.positions) ? entity.positions : [])
+      .map(normalizePosition)
+      // A position whose assigned person no longer exists (e.g. deleted from
+      // another device before this JSON was exported) goes vacant, not deleted.
+      .map((position) =>
+        position.assignedPersonId && !peopleIds.has(position.assignedPersonId)
+          ? { ...position, assignedPersonId: null }
+          : position
+      ),
+  }));
+
   return {
     ...state,
     entities,
     entitiesOrder: normalizedOrder,
     assignments: state.assignments.filter((assignment) => assignment.entityId !== 'entity-ejercito'),
-    people: state.people.map(normalizePerson),
+    people,
     holdingMembers: Array.isArray(state.holdingMembers) && state.holdingMembers.length > 0
       ? state.holdingMembers
       : INITIAL_STATE.holdingMembers,
@@ -835,6 +907,150 @@ function LicitationEntitySummary({ entity }: { entity: BoardEntity }) {
   );
 }
 
+// A Puesto (Position) card: vacant positions get a dashed amber outline, a
+// "VACANTE" badge and an inline occupy control (dropdown + FTE + button, plus a
+// drop target for dragging a Person straight from the Bank). Occupied positions
+// show the assigned person, their FTE% and a "Desasignar" action that frees the
+// position without deleting it — the position is the SSoT, not the assignment.
+function PositionCard({
+  position,
+  entityId,
+  people,
+  readOnly,
+  onAssign,
+  onUnassign,
+  onEdit,
+  onDelete,
+}: {
+  position: Position;
+  entityId: string;
+  people: Person[];
+  readOnly: boolean;
+  onAssign: (entityId: string, positionId: string, personId: string, fte: number) => void;
+  onUnassign: (entityId: string, positionId: string) => void;
+  onEdit: (position: Position, entityId: string) => void;
+  onDelete: (entityId: string, positionId: string) => void;
+}) {
+  const assignedPerson = position.assignedPersonId
+    ? people.find((candidate) => candidate.id === position.assignedPersonId) || null
+    : null;
+  const isVacant = !assignedPerson;
+
+  const { setNodeRef, isOver } = useDroppable({
+    id: `position:${position.id}`,
+    disabled: !isVacant || readOnly,
+  });
+
+  const [pickedPersonId, setPickedPersonId] = useState('');
+  const [pickedFte, setPickedFte] = useState<number>(1);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-xl border p-2.5 transition-all ${
+        isVacant
+          ? `border-dashed ${isOver ? 'border-amber-300 bg-amber-950/25' : 'border-amber-500/60 bg-amber-950/10'}`
+          : 'border-slate-800 bg-slate-900/70'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h5 className="truncate text-xs font-display font-bold leading-tight text-slate-100">{position.title}</h5>
+          {position.department && <p className="mt-0.5 truncate text-[10px] font-medium text-slate-500">{position.department}</p>}
+        </div>
+        {isVacant ? (
+          <span className="shrink-0 rounded-full border border-amber-400/60 bg-amber-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-300">
+            Vacante
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-full border border-cyan-700/60 bg-cyan-950/50 px-2 py-0.5 text-[9px] font-black text-cyan-200">
+            {formatFte(position.fte)} FTE
+          </span>
+        )}
+      </div>
+
+      {assignedPerson ? (
+        <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-bold text-slate-100">{assignedPerson.name}</p>
+            <div className="mt-1"><RoleBadge role={assignedPerson.role} /></div>
+          </div>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => onUnassign(entityId, position.id)}
+              className="shrink-0 rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-400 transition-colors hover:border-amber-400/50 hover:text-amber-300"
+              title="Desasignar (el puesto sigue existiendo, vacante)"
+            >
+              <UserMinus className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      ) : (
+        !readOnly && (
+          <div className="mt-2 flex flex-col gap-1.5">
+            <select
+              value={pickedPersonId}
+              onChange={(event) => setPickedPersonId(event.target.value)}
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 outline-none focus:border-amber-500"
+            >
+              <option value="">Elegir persona…</option>
+              {people.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>{candidate.name}</option>
+              ))}
+            </select>
+            <div className="flex gap-1.5">
+              <select
+                value={pickedFte}
+                onChange={(event) => setPickedFte(Number(event.target.value))}
+                className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 outline-none focus:border-amber-500"
+              >
+                {FTE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label} FTE</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={!pickedPersonId}
+                onClick={() => {
+                  onAssign(entityId, position.id, pickedPersonId, pickedFte);
+                  setPickedPersonId('');
+                  setPickedFte(1);
+                }}
+                className="shrink-0 rounded-lg border border-emerald-500/40 bg-emerald-950/30 px-2.5 py-1.5 text-[11px] font-bold text-emerald-300 transition-colors hover:bg-emerald-950/50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Asignar
+              </button>
+            </div>
+            <p className="text-[9px] leading-relaxed text-slate-500">O arrastra una persona del Banco hasta aquí para ocupar el puesto.</p>
+          </div>
+        )
+      )}
+
+      {!readOnly && (
+        <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-slate-800/70 pt-2">
+          <button
+            type="button"
+            onClick={() => onEdit(position, entityId)}
+            className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
+            title="Editar puesto"
+          >
+            <Edit2 className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(entityId, position.id)}
+            className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-red-400/50 hover:text-red-300"
+            title="Eliminar puesto"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EntityColumn({
   entity,
   assignments,
@@ -855,6 +1071,11 @@ function EntityColumn({
   onDeleteEntity,
   onRemoveAssignment,
   onMoveEntity,
+  onAddPosition,
+  onEditPosition,
+  onDeletePosition,
+  onAssignPosition,
+  onUnassignPosition,
 }: {
   entity: BoardEntity;
   assignments: Assignment[];
@@ -875,7 +1096,13 @@ function EntityColumn({
   onDeleteEntity: (entity: BoardEntity) => void;
   onRemoveAssignment: (assignmentId: string) => void;
   onMoveEntity: (entityId: string, direction: 'left' | 'right') => void;
+  onAddPosition: (entityId: string) => void;
+  onEditPosition: (position: Position, entityId: string) => void;
+  onDeletePosition: (entityId: string, positionId: string) => void;
+  onAssignPosition: (entityId: string, positionId: string, personId: string, fte: number) => void;
+  onUnassignPosition: (entityId: string, positionId: string) => void;
 }) {
+  const positions = entity.positions || [];
   const { setNodeRef, isOver } = useDroppable({ id: `entity:${entity.id}` });
   const {
     attributes: columnAttributes,
@@ -970,6 +1197,46 @@ function EntityColumn({
       </header>
 
       <div className={`overflow-visible ${fitMode ? 'space-y-1.5 p-2' : 'space-y-2 p-2.5'}`}>
+        <div className={fitMode ? 'pb-1' : 'pb-1.5'}>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Puestos ({positions.length})</span>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => onAddPosition(entity.id)}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-300 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
+                title="Crear puesto en esta entidad"
+              >
+                <Plus className="h-3 w-3" />
+                Puesto
+              </button>
+            )}
+          </div>
+          {positions.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-800 p-2 text-center text-[10px] text-slate-500">Sin puestos definidos todavía.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {positions.map((position) => (
+                <PositionCard
+                  key={position.id}
+                  position={position}
+                  entityId={entity.id}
+                  people={people}
+                  readOnly={readOnly}
+                  onAssign={onAssignPosition}
+                  onUnassign={onUnassignPosition}
+                  onEdit={onEditPosition}
+                  onDelete={onDeletePosition}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-slate-800/70 pt-2">
+          <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Asignaciones rápidas ({assignments.length})</span>
+        </div>
+
         {assignments.length === 0 ? (
           <div className="flex min-h-[100px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-800 p-6 text-center text-slate-500">
             <Users className="mb-2 h-8 w-8 opacity-25" />
@@ -1731,9 +1998,12 @@ export default function App() {
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false);
   const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
   const [isHoldingModalOpen, setIsHoldingModalOpen] = useState(false);
+  const [isPositionModalOpen, setIsPositionModalOpen] = useState(false);
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const [editingEntityId, setEditingEntityId] = useState<string | null>(null);
   const [editingHoldingId, setEditingHoldingId] = useState<string | null>(null);
+  const [editingPositionId, setEditingPositionId] = useState<string | null>(null);
+  const [positionEntityId, setPositionEntityId] = useState('');
   const [manualAssignEntityId, setManualAssignEntityId] = useState('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [connectionLines, setConnectionLines] = useState<ConnectionLine[]>([]);
@@ -1767,6 +2037,12 @@ export default function App() {
     name: '',
     role: '',
     notes: '',
+  });
+
+  const [positionForm, setPositionForm] = useState({
+    title: '',
+    department: '',
+    fte: 1,
   });
 
   const sensors = useSensors(
@@ -2146,6 +2422,14 @@ export default function App() {
       connections: prev.connections.filter(
         (connection) => connection.sourcePersonId !== personId && connection.targetPersonId !== personId
       ),
+      // SSoT: deleting a Person frees any Position they held instead of deleting
+      // the Position itself — the seat stays defined on the entity, now vacant.
+      entities: prev.entities.map((entity) => ({
+        ...entity,
+        positions: (entity.positions || []).map((position) =>
+          position.assignedPersonId === personId ? { ...position, assignedPersonId: null } : position
+        ),
+      })),
     }));
     setSelectedPersonId(null);
     showToast(`${person.name} eliminado definitivamente.`, 'warning');
@@ -2156,7 +2440,7 @@ export default function App() {
     const entity = board.entities.find((candidate) => candidate.id === entityId);
     if (!entity) return;
 
-    if (!window.confirm(`¿Eliminar definitivamente "${entity.name}"? Se quitarán sus asignaciones asociadas.`)) return;
+    if (!window.confirm(`¿Eliminar definitivamente "${entity.name}"? Se quitarán sus asignaciones y puestos asociados.`)) return;
 
     setBoard((prev) => ({
       ...prev,
@@ -2165,6 +2449,133 @@ export default function App() {
       assignments: prev.assignments.filter((assignment) => assignment.entityId !== entityId),
     }));
     showToast(`${entity.name} eliminado definitivamente.`, 'warning');
+  };
+
+  const findEntityByPositionId = (positionId: string) =>
+    board.entities.find((entity) => (entity.positions || []).some((position) => position.id === positionId));
+
+  const openNewPositionModal = (entityId: string) => {
+    setEditingPositionId(null);
+    setPositionEntityId(entityId);
+    setPositionForm({ title: '', department: '', fte: 1 });
+    setIsPositionModalOpen(true);
+  };
+
+  const openEditPositionModal = (position: Position, entityId: string) => {
+    setEditingPositionId(position.id);
+    setPositionEntityId(entityId);
+    setPositionForm({ title: position.title, department: position.department, fte: position.fte });
+    setIsPositionModalOpen(true);
+  };
+
+  const handleSavePosition = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!positionForm.title.trim() || !positionEntityId) return;
+
+    const cleanTitle = positionForm.title.trim();
+    const cleanDepartment = positionForm.department.trim();
+
+    if (editingPositionId) {
+      setBoard((prev) => ({
+        ...prev,
+        entities: prev.entities.map((entity) =>
+          entity.id === positionEntityId
+            ? {
+                ...entity,
+                positions: (entity.positions || []).map((position) =>
+                  position.id === editingPositionId
+                    ? { ...position, title: cleanTitle, department: cleanDepartment, fte: positionForm.fte }
+                    : position
+                ),
+              }
+            : entity
+        ),
+      }));
+      showToast('Puesto actualizado.', 'success');
+    } else {
+      const position: Position = {
+        id: createId('position'),
+        title: cleanTitle,
+        department: cleanDepartment,
+        fte: positionForm.fte,
+        assignedPersonId: null,
+      };
+      setBoard((prev) => ({
+        ...prev,
+        entities: prev.entities.map((entity) =>
+          entity.id === positionEntityId ? { ...entity, positions: [...(entity.positions || []), position] } : entity
+        ),
+      }));
+      showToast(`Puesto "${position.title}" creado (vacante).`, 'success');
+    }
+
+    setEditingPositionId(null);
+    setIsPositionModalOpen(false);
+  };
+
+  const handleDeletePosition = (entityId: string, positionId: string) => {
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    const position = entity?.positions?.find((candidate) => candidate.id === positionId);
+    if (!position) return;
+
+    if (!window.confirm(`¿Eliminar definitivamente el puesto "${position.title}"?`)) return;
+
+    setBoard((prev) => ({
+      ...prev,
+      entities: prev.entities.map((candidate) =>
+        candidate.id === entityId
+          ? { ...candidate, positions: (candidate.positions || []).filter((p) => p.id !== positionId) }
+          : candidate
+      ),
+    }));
+    showToast(`Puesto "${position.title}" eliminado.`, 'warning');
+  };
+
+  const handleAssignPersonToPosition = (entityId: string, positionId: string, personId: string, fte: number) => {
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    const position = entity?.positions?.find((candidate) => candidate.id === positionId);
+    const person = board.people.find((candidate) => candidate.id === personId);
+    if (!entity || !position || !person) return;
+
+    if (position.assignedPersonId) {
+      showToast(`"${position.title}" ya está ocupado. Desasígnalo primero.`, 'warning');
+      return;
+    }
+
+    setBoard((prev) => ({
+      ...prev,
+      entities: prev.entities.map((candidate) =>
+        candidate.id === entityId
+          ? {
+              ...candidate,
+              positions: (candidate.positions || []).map((p) =>
+                p.id === positionId ? { ...p, assignedPersonId: personId, fte } : p
+              ),
+            }
+          : candidate
+      ),
+    }));
+    showToast(`${person.name} asignado a "${position.title}" (${formatFte(fte)} FTE).`, 'success');
+  };
+
+  const handleUnassignPosition = (entityId: string, positionId: string) => {
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    const position = entity?.positions?.find((candidate) => candidate.id === positionId);
+
+    setBoard((prev) => ({
+      ...prev,
+      entities: prev.entities.map((candidate) =>
+        candidate.id === entityId
+          ? {
+              ...candidate,
+              positions: (candidate.positions || []).map((p) =>
+                p.id === positionId ? { ...p, assignedPersonId: null } : p
+              ),
+            }
+          : candidate
+      ),
+    }));
+    showToast(position ? `"${position.title}" quedó vacante.` : 'Puesto liberado.', 'info');
   };
 
   const openEditHoldingModal = (member: HoldingMember) => {
@@ -2278,6 +2689,17 @@ export default function App() {
       const targetEntityId = overId.startsWith('entity:') ? overId.replace('entity:', '') : '';
       if (sourceEntityId && targetEntityId && reorderEntity(sourceEntityId, targetEntityId)) {
         showToast('Orden de columnas actualizado.', 'success');
+      }
+      return;
+    }
+
+    // Dropping a person straight onto a vacant Position occupies it at 100% FTE
+    // by default — the FTE can be fine-tuned afterwards from the position card.
+    const targetPositionId = overId.startsWith('position:') ? overId.replace('position:', '') : '';
+    if (personId && targetPositionId) {
+      const targetEntity = findEntityByPositionId(targetPositionId);
+      if (targetEntity) {
+        handleAssignPersonToPosition(targetEntity.id, targetPositionId, personId, 1);
       }
       return;
     }
@@ -2653,7 +3075,7 @@ export default function App() {
           </div>
         )}
 
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div ref={boardContentRef} className="relative flex flex-col gap-5 pb-5">
             <svg
               className="pointer-events-none absolute inset-0 z-20 overflow-visible"
@@ -2784,6 +3206,11 @@ export default function App() {
                                   onDeleteEntity={(entityToDelete) => handleDeleteEntity(entityToDelete.id)}
                                   onRemoveAssignment={handleRemoveAssignment}
                                   onMoveEntity={handleMoveEntity}
+                                  onAddPosition={openNewPositionModal}
+                                  onEditPosition={openEditPositionModal}
+                                  onDeletePosition={handleDeletePosition}
+                                  onAssignPosition={handleAssignPersonToPosition}
+                                  onUnassignPosition={handleUnassignPosition}
                                 />
                               </div>
                             );
@@ -3300,6 +3727,81 @@ export default function App() {
               </button>
               <button type="submit" className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400">
                 Guardar cambios
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {isPositionModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <form onSubmit={handleSavePosition} className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="font-display text-lg font-extrabold text-white">{editingPositionId ? 'Editar puesto' : 'Crear puesto'}</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPositionId(null);
+                  setIsPositionModalOpen(false);
+                }}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="mb-4 text-xs text-slate-500">
+              Entidad: <strong className="text-slate-300">{getEntityName(positionEntityId)}</strong>. El puesto se crea vacante y puede
+              ocuparse luego arrastrando una persona del Banco o eligiéndola directamente en su tarjeta.
+            </p>
+
+            <div className="grid gap-4">
+              <label className="text-xs font-bold text-slate-400">
+                Título del puesto
+                <input
+                  required
+                  value={positionForm.title}
+                  onChange={(event) => setPositionForm({ ...positionForm, title: event.target.value })}
+                  placeholder="Ej: Jefe de Proyecto"
+                  className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                />
+              </label>
+              <label className="text-xs font-bold text-slate-400">
+                Departamento
+                <input
+                  value={positionForm.department}
+                  onChange={(event) => setPositionForm({ ...positionForm, department: event.target.value })}
+                  placeholder="Ej: Dirección, Operaciones, Legal"
+                  className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                />
+              </label>
+              <label className="text-xs font-bold text-slate-400">
+                Dedicación (FTE)
+                <select
+                  value={positionForm.fte}
+                  onChange={(event) => setPositionForm({ ...positionForm, fte: Number(event.target.value) })}
+                  className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                >
+                  {FTE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPositionId(null);
+                  setIsPositionModalOpen(false);
+                }}
+                className="rounded-xl border border-slate-800 px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400">
+                {editingPositionId ? 'Guardar cambios' : 'Crear puesto'}
               </button>
             </div>
           </form>
