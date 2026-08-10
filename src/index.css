@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+}
+
+/* Custom styles and smooth animations */
+body {
+  font-family: var(--font-sans);
+  background: radial-gradient(circle at top right, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 1) 100%), #0b0f19;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Customized scrollbar for list containers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  border: 2px solid transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* Smooth drag and drop styling utilities */
+.drop-shadow-glow {
+  filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.25));
+}
