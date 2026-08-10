@@ -11,6 +11,12 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Building2,
@@ -772,9 +778,12 @@ function AssignmentCard({
   connectionMode,
   readOnly = false,
   highlighted = false,
+  canMoveUp,
+  canMoveDown,
   onOpen,
   onConnect,
   onRemoveAssignment,
+  onMoveAssignment,
   onHover,
 }: {
   assignment: Assignment;
@@ -786,18 +795,21 @@ function AssignmentCard({
   connectionMode: boolean;
   readOnly?: boolean;
   highlighted?: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
   onOpen: (person: Person) => void;
   onConnect: (person: Person) => void;
   onRemoveAssignment: (assignmentId: string) => void;
+  onMoveAssignment: (assignmentId: string, direction: 'up' | 'down') => void;
   onHover?: (personId: string | null) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `assignment:${assignment.id}`,
-    data: { type: 'assignment', personId: person.id, assignmentId: assignment.id },
+    data: { type: 'assignment', personId: person.id, assignmentId: assignment.id, entityId: assignment.entityId },
     disabled: readOnly,
   });
 
-  const style = transform ? { transform: CSS.Transform.toString(transform) } : undefined;
+  const style = transform ? { transform: CSS.Transform.toString(transform), transition } : { transition };
 
   return (
     <div
@@ -831,29 +843,55 @@ function AssignmentCard({
           {!compact && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{assignment.taskText || 'Sin función específica registrada.'}</p>}
         </div>
         {!readOnly && (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onRemoveAssignment(assignment.id);
-            }}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 opacity-70 transition-colors hover:border-red-400/50 hover:text-red-300 group-hover:opacity-100"
-            title="Quitar de esta entidad"
-          >
-            <UserMinus className="h-3.5 w-3.5" />
-          </button>
-        )}
-        {!readOnly && (
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            onClick={(event) => event.stopPropagation()}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
-            title="Arrastrar asignación"
-          >
-            <GripVertical className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onMoveAssignment(assignment.id, 'up');
+                }}
+                disabled={!canMoveUp}
+                className="rounded-md border border-slate-700 bg-slate-950 p-0.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 disabled:cursor-not-allowed disabled:opacity-30"
+                title="Subir asignación"
+              >
+                <ChevronUp className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onMoveAssignment(assignment.id, 'down');
+                }}
+                disabled={!canMoveDown}
+                className="rounded-md border border-slate-700 bg-slate-950 p-0.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 disabled:cursor-not-allowed disabled:opacity-30"
+                title="Bajar asignación"
+              >
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onRemoveAssignment(assignment.id);
+              }}
+              className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 opacity-70 transition-colors hover:border-red-400/50 hover:text-red-300 group-hover:opacity-100"
+              title="Quitar de esta entidad"
+            >
+              <UserMinus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              {...attributes}
+              {...listeners}
+              onClick={(event) => event.stopPropagation()}
+              className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
+              title="Arrastrar asignación"
+            >
+              <GripVertical className="h-3.5 w-3.5" />
+            </button>
+          </div>
         )}
         {!readOnly && connectionMode && (
           <button
@@ -921,6 +959,9 @@ function PositionCard({
   onUnassign,
   onEdit,
   onDelete,
+  canMoveUp,
+  canMoveDown,
+  onMove,
 }: {
   position: Position;
   entityId: string;
@@ -930,28 +971,34 @@ function PositionCard({
   onUnassign: (entityId: string, positionId: string) => void;
   onEdit: (position: Position, entityId: string) => void;
   onDelete: (entityId: string, positionId: string) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMove: (positionId: string, direction: 'up' | 'down') => void;
 }) {
   const assignedPerson = position.assignedPersonId
     ? people.find((candidate) => candidate.id === position.assignedPersonId) || null
     : null;
   const isVacant = !assignedPerson;
 
-  const { setNodeRef, isOver } = useDroppable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
     id: `position:${position.id}`,
-    disabled: !isVacant || readOnly,
+    data: { type: 'position', entityId, positionId: position.id },
+    disabled: readOnly,
   });
 
   const [pickedPersonId, setPickedPersonId] = useState('');
   const [pickedFte, setPickedFte] = useState<number>(1);
+  const style = transform ? { transform: CSS.Transform.toString(transform), transition } : { transition };
 
   return (
     <div
       ref={setNodeRef}
+      style={style}
       className={`rounded-xl border p-2.5 transition-all ${
         isVacant
           ? `border-dashed ${isOver ? 'border-amber-300 bg-amber-950/25' : 'border-amber-500/60 bg-amber-950/10'}`
           : 'border-slate-800 bg-slate-900/70'
-      }`}
+      } ${isDragging ? 'opacity-40' : 'opacity-100'}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -1031,6 +1078,33 @@ function PositionCard({
         <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-slate-800/70 pt-2">
           <button
             type="button"
+            onClick={() => onMove(position.id, 'up')}
+            disabled={!canMoveUp}
+            className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 disabled:cursor-not-allowed disabled:opacity-30"
+            title="Subir puesto"
+          >
+            <ChevronUp className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onMove(position.id, 'down')}
+            disabled={!canMoveDown}
+            className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 disabled:cursor-not-allowed disabled:opacity-30"
+            title="Bajar puesto"
+          >
+            <ChevronDown className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
+            title="Arrastrar puesto"
+          >
+            <GripVertical className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
             onClick={() => onEdit(position, entityId)}
             className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
             title="Editar puesto"
@@ -1070,12 +1144,14 @@ function EntityColumn({
   onEditEntity,
   onDeleteEntity,
   onRemoveAssignment,
+  onReorderAssignment,
   onMoveEntity,
   onAddPosition,
   onEditPosition,
   onDeletePosition,
   onAssignPosition,
   onUnassignPosition,
+  onReorderPosition,
 }: {
   entity: BoardEntity;
   assignments: Assignment[];
@@ -1095,12 +1171,14 @@ function EntityColumn({
   onEditEntity: (entity: BoardEntity) => void;
   onDeleteEntity: (entity: BoardEntity) => void;
   onRemoveAssignment: (assignmentId: string) => void;
+  onReorderAssignment: (entityId: string, activeAssignmentId: string, overAssignmentId: string) => void;
   onMoveEntity: (entityId: string, direction: 'left' | 'right') => void;
   onAddPosition: (entityId: string) => void;
   onEditPosition: (position: Position, entityId: string) => void;
   onDeletePosition: (entityId: string, positionId: string) => void;
   onAssignPosition: (entityId: string, positionId: string, personId: string, fte: number) => void;
   onUnassignPosition: (entityId: string, positionId: string) => void;
+  onReorderPosition: (entityId: string, activePositionId: string, overPositionId: string) => void;
 }) {
   const positions = entity.positions || [];
   const { setNodeRef, isOver } = useDroppable({ id: `entity:${entity.id}` });
@@ -1118,6 +1196,20 @@ function EntityColumn({
   const meta = ENTITY_META[entity.type];
   const Icon = meta.icon;
   const columnStyle = columnTransform ? { transform: CSS.Transform.toString(columnTransform) } : undefined;
+  const moveAssignment = (assignmentId: string, direction: 'up' | 'down') => {
+    const currentIndex = assignments.findIndex((assignment) => assignment.id === assignmentId);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    const targetAssignment = assignments[targetIndex];
+    if (currentIndex < 0 || !targetAssignment) return;
+    onReorderAssignment(entity.id, assignmentId, targetAssignment.id);
+  };
+  const movePosition = (positionId: string, direction: 'up' | 'down') => {
+    const currentIndex = positions.findIndex((position) => position.id === positionId);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    const targetPosition = positions[targetIndex];
+    if (currentIndex < 0 || !targetPosition) return;
+    onReorderPosition(entity.id, positionId, targetPosition.id);
+  };
 
   return (
     <section
@@ -1215,21 +1307,26 @@ function EntityColumn({
           {positions.length === 0 ? (
             <p className="rounded-lg border border-dashed border-slate-800 p-2 text-center text-[10px] text-slate-500">Sin puestos definidos todavía.</p>
           ) : (
-            <div className="space-y-1.5">
-              {positions.map((position) => (
-                <PositionCard
-                  key={position.id}
-                  position={position}
-                  entityId={entity.id}
-                  people={people}
-                  readOnly={readOnly}
-                  onAssign={onAssignPosition}
-                  onUnassign={onUnassignPosition}
-                  onEdit={onEditPosition}
-                  onDelete={onDeletePosition}
-                />
-              ))}
-            </div>
+            <SortableContext items={positions.map((position) => `position:${position.id}`)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-1.5">
+                {positions.map((position, positionIndex) => (
+                  <PositionCard
+                    key={position.id}
+                    position={position}
+                    entityId={entity.id}
+                    people={people}
+                    readOnly={readOnly}
+                    canMoveUp={positionIndex > 0}
+                    canMoveDown={positionIndex < positions.length - 1}
+                    onAssign={onAssignPosition}
+                    onUnassign={onUnassignPosition}
+                    onEdit={onEditPosition}
+                    onDelete={onDeletePosition}
+                    onMove={movePosition}
+                  />
+                ))}
+              </div>
+            </SortableContext>
           )}
         </div>
 
@@ -1244,29 +1341,36 @@ function EntityColumn({
             <p className="mt-1 text-[10px] leading-relaxed">Se copian a esta columna sin salir de su origen.</p>
           </div>
         ) : (
-          assignments.map((assignment) => {
-            const person = people.find((candidate) => candidate.id === assignment.personId);
-            if (!person) return null;
+          <SortableContext items={assignments.map((assignment) => `assignment:${assignment.id}`)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {assignments.map((assignment, assignmentIndex) => {
+                const person = people.find((candidate) => candidate.id === assignment.personId);
+                if (!person) return null;
 
-            return (
-              <AssignmentCard
-                key={assignment.id}
-                assignment={assignment}
-                person={person}
-                searchQuery={searchQuery}
-                compact={compact}
-                dense={fitMode}
-                selected={selectedConnectionPersonId === person.id}
-                highlighted={hoveredPersonId === person.id}
-                connectionMode={connectionMode}
-                readOnly={readOnly}
-                onOpen={onOpenPerson}
-                onConnect={onConnect}
-                onRemoveAssignment={onRemoveAssignment}
-                onHover={onHoverPerson}
-              />
-            );
-          })
+                return (
+                  <AssignmentCard
+                    key={assignment.id}
+                    assignment={assignment}
+                    person={person}
+                    searchQuery={searchQuery}
+                    compact={compact}
+                    dense={fitMode}
+                    selected={selectedConnectionPersonId === person.id}
+                    highlighted={hoveredPersonId === person.id}
+                    connectionMode={connectionMode}
+                    readOnly={readOnly}
+                    canMoveUp={assignmentIndex > 0}
+                    canMoveDown={assignmentIndex < assignments.length - 1}
+                    onOpen={onOpenPerson}
+                    onConnect={onConnect}
+                    onRemoveAssignment={onRemoveAssignment}
+                    onMoveAssignment={moveAssignment}
+                    onHover={onHoverPerson}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
         )}
       </div>
     </section>
@@ -2252,7 +2356,7 @@ export default function App() {
       window.removeEventListener('scroll', handleRefresh, true);
       observer.disconnect();
     };
-  }, [board.assignments, collapsedLevels, filteredPeople, fitToScreen, isBankDrawerOpen, refreshConnectionLines, visibleEntities]);
+  }, [board.assignments, board.entities, collapsedLevels, filteredPeople, fitToScreen, isBankDrawerOpen, refreshConnectionLines, visibleEntities]);
 
   // Lock background scroll while the Bank drawer is open, and recalculate the
   // connection SVG right after it opens/closes since that toggle can shift the
@@ -2651,6 +2755,70 @@ export default function App() {
     return true;
   };
 
+  const reorderAssignmentsInEntity = (entityId: string, activeAssignmentId: string, overAssignmentId: string) => {
+    if (activeAssignmentId === overAssignmentId) return false;
+
+    const currentAssignments = board.assignments.filter((assignment) => assignment.entityId === entityId);
+    const fromIndex = currentAssignments.findIndex((assignment) => assignment.id === activeAssignmentId);
+    const toIndex = currentAssignments.findIndex((assignment) => assignment.id === overAssignmentId);
+    if (fromIndex < 0 || toIndex < 0) return false;
+
+    setBoard((prev) => {
+      const entityAssignments = prev.assignments.filter((assignment) => assignment.entityId === entityId);
+      const currentIndex = entityAssignments.findIndex((assignment) => assignment.id === activeAssignmentId);
+      const targetIndex = entityAssignments.findIndex((assignment) => assignment.id === overAssignmentId);
+      if (currentIndex < 0 || targetIndex < 0) return prev;
+
+      const reorderedAssignments = arrayMove(entityAssignments, currentIndex, targetIndex);
+      let replacementIndex = 0;
+
+      return {
+        ...prev,
+        assignments: prev.assignments.map((assignment) =>
+          assignment.entityId === entityId ? reorderedAssignments[replacementIndex++] : assignment
+        ),
+      };
+    });
+    return true;
+  };
+
+  const reorderPositionsInEntity = (entityId: string, activePositionId: string, overPositionId: string) => {
+    if (activePositionId === overPositionId) return false;
+
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    const positions = entity?.positions || [];
+    const fromIndex = positions.findIndex((position) => position.id === activePositionId);
+    const toIndex = positions.findIndex((position) => position.id === overPositionId);
+    if (fromIndex < 0 || toIndex < 0) return false;
+
+    setBoard((prev) => ({
+      ...prev,
+      entities: prev.entities.map((candidate) => {
+        if (candidate.id !== entityId) return candidate;
+
+        const currentPositions = candidate.positions || [];
+        const currentIndex = currentPositions.findIndex((position) => position.id === activePositionId);
+        const targetIndex = currentPositions.findIndex((position) => position.id === overPositionId);
+        if (currentIndex < 0 || targetIndex < 0) return candidate;
+
+        return { ...candidate, positions: arrayMove(currentPositions, currentIndex, targetIndex) };
+      }),
+    }));
+    return true;
+  };
+
+  const handleReorderAssignment = (entityId: string, activeAssignmentId: string, overAssignmentId: string) => {
+    if (reorderAssignmentsInEntity(entityId, activeAssignmentId, overAssignmentId)) {
+      showToast('Orden interno de asignaciones actualizado.', 'success');
+    }
+  };
+
+  const handleReorderPosition = (entityId: string, activePositionId: string, overPositionId: string) => {
+    if (reorderPositionsInEntity(entityId, activePositionId, overPositionId)) {
+      showToast('Orden interno de puestos actualizado.', 'success');
+    }
+  };
+
   const handleMoveEntity = (entityId: string, direction: 'left' | 'right') => {
     const entity = board.entities.find((candidate) => candidate.id === entityId);
     if (!entity) return;
@@ -2681,6 +2849,9 @@ export default function App() {
   const handleDragEnd = (event: DragEndEvent) => {
     const activeType = event.active.data.current?.type as string | undefined;
     const personId = event.active.data.current?.personId as string | undefined;
+    const activeEntityId = event.active.data.current?.entityId as string | undefined;
+    const overType = event.over?.data.current?.type as string | undefined;
+    const overEntityId = event.over?.data.current?.entityId as string | undefined;
     const overId = String(event.over?.id || '');
     setActivePersonId(null);
 
@@ -2690,6 +2861,45 @@ export default function App() {
       if (sourceEntityId && targetEntityId && reorderEntity(sourceEntityId, targetEntityId)) {
         showToast('Orden de columnas actualizado.', 'success');
       }
+      return;
+    }
+
+    if (activeType === 'assignment' && overType === 'assignment') {
+      const sourceAssignmentId = event.active.data.current?.assignmentId as string | undefined;
+      const targetAssignmentId = event.over?.data.current?.assignmentId as string | undefined;
+      if (
+        activeEntityId &&
+        overEntityId &&
+        activeEntityId === overEntityId &&
+        sourceAssignmentId &&
+        targetAssignmentId &&
+        reorderAssignmentsInEntity(activeEntityId, sourceAssignmentId, targetAssignmentId)
+      ) {
+        showToast('Orden interno de asignaciones actualizado.', 'success');
+      } else if (personId && overEntityId && activeEntityId !== overEntityId) {
+        handleAssignPersonToEntity(personId, overEntityId);
+      }
+      return;
+    }
+
+    if (activeType === 'position' && overType === 'position') {
+      const sourcePositionId = event.active.data.current?.positionId as string | undefined;
+      const targetPositionId = event.over?.data.current?.positionId as string | undefined;
+      if (
+        activeEntityId &&
+        overEntityId &&
+        activeEntityId === overEntityId &&
+        sourcePositionId &&
+        targetPositionId &&
+        reorderPositionsInEntity(activeEntityId, sourcePositionId, targetPositionId)
+      ) {
+        showToast('Orden interno de puestos actualizado.', 'success');
+      }
+      return;
+    }
+
+    if (personId && overType === 'assignment' && overEntityId) {
+      handleAssignPersonToEntity(personId, overEntityId);
       return;
     }
 
@@ -3205,12 +3415,14 @@ export default function App() {
                                   onEditEntity={openEditEntityModal}
                                   onDeleteEntity={(entityToDelete) => handleDeleteEntity(entityToDelete.id)}
                                   onRemoveAssignment={handleRemoveAssignment}
+                                  onReorderAssignment={handleReorderAssignment}
                                   onMoveEntity={handleMoveEntity}
                                   onAddPosition={openNewPositionModal}
                                   onEditPosition={openEditPositionModal}
                                   onDeletePosition={handleDeletePosition}
                                   onAssignPosition={handleAssignPersonToPosition}
                                   onUnassignPosition={handleUnassignPosition}
+                                  onReorderPosition={handleReorderPosition}
                                 />
                               </div>
                             );
