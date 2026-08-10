@@ -236,26 +236,28 @@ const ENTITY_META: Record<EntityType, { label: string; icon: React.ElementType; 
 const LEVEL_ORDER: EntityType[] = ['empresa', 'proyecto', 'licitacion', 'tarea'];
 
 const LEVEL_META: Record<EntityType, { title: string; noun: string; bg: string; border: string; text: string }> = {
-  empresa: { title: 'Nivel 1 · Empresas', noun: 'empresas', bg: 'bg-blue-100 dark:bg-blue-950/60', border: 'border-blue-300 dark:border-blue-800', text: 'text-blue-800 dark:text-blue-300' },
-  proyecto: { title: 'Nivel 2 · Proyectos', noun: 'proyectos', bg: 'bg-emerald-100 dark:bg-emerald-950/60', border: 'border-emerald-300 dark:border-emerald-800', text: 'text-emerald-800 dark:text-emerald-300' },
-  licitacion: { title: 'Nivel 3 · Licitaciones', noun: 'licitaciones', bg: 'bg-orange-100 dark:bg-orange-950/60', border: 'border-orange-300 dark:border-orange-800', text: 'text-orange-800 dark:text-orange-300' },
-  tarea: { title: 'Nivel 4 · Tareas', noun: 'tareas', bg: 'bg-purple-100 dark:bg-purple-950/60', border: 'border-purple-300 dark:border-purple-800', text: 'text-purple-800 dark:text-purple-300' },
+  empresa: { title: 'Nivel 1 · Empresas', noun: 'empresas', bg: 'bg-blue-50 dark:bg-blue-950/60', border: 'border-blue-300 dark:border-blue-800', text: 'text-blue-800 dark:text-blue-300' },
+  proyecto: { title: 'Nivel 2 · Proyectos', noun: 'proyectos', bg: 'bg-emerald-50 dark:bg-emerald-950/60', border: 'border-emerald-300 dark:border-emerald-800', text: 'text-emerald-800 dark:text-emerald-300' },
+  licitacion: { title: 'Nivel 3 · Licitaciones', noun: 'licitaciones', bg: 'bg-orange-50 dark:bg-orange-950/60', border: 'border-orange-300 dark:border-orange-800', text: 'text-orange-800 dark:text-orange-300' },
+  tarea: { title: 'Nivel 4 · Tareas', noun: 'tareas', bg: 'bg-purple-50 dark:bg-purple-950/60', border: 'border-purple-300 dark:border-purple-800', text: 'text-purple-800 dark:text-purple-300' },
 };
 
+// High-contrast pill colors — bg-50/border-300/text-800-900 formula in Modo
+// Claro, bg-900/80 dark:border formula in Modo Oscuro (unchanged legibility).
 const ROLE_BADGES: Record<RoleType, { bg: string; border: string; text: string; dot: string }> = {
-  Management: { bg: 'bg-blue-100 dark:bg-blue-900/80', border: 'border-blue-300 dark:border-blue-700', text: 'text-blue-800 dark:text-blue-200', dot: 'bg-blue-700 dark:bg-blue-300' },
-  Administrativo: { bg: 'bg-emerald-100 dark:bg-emerald-900/80', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-800 dark:text-emerald-200', dot: 'bg-emerald-700 dark:bg-emerald-300' },
-  Operativo: { bg: 'bg-amber-100 dark:bg-amber-900/80', border: 'border-amber-300 dark:border-amber-700', text: 'text-amber-800 dark:text-amber-200', dot: 'bg-amber-700 dark:bg-amber-300' },
-  Arquitectura: { bg: 'bg-purple-100 dark:bg-purple-900/80', border: 'border-purple-300 dark:border-purple-700', text: 'text-purple-800 dark:text-purple-200', dot: 'bg-purple-700 dark:bg-purple-300' },
-  Externo: { bg: 'bg-gray-100 dark:bg-gray-800', border: 'border-gray-300 dark:border-gray-600', text: 'text-gray-800 dark:text-gray-200', dot: 'bg-gray-700 dark:bg-gray-300' },
-  Asesor: { bg: 'bg-indigo-100 dark:bg-indigo-900/80', border: 'border-indigo-300 dark:border-indigo-700', text: 'text-indigo-800 dark:text-indigo-200', dot: 'bg-indigo-700 dark:bg-indigo-300' },
-  Finanzas: { bg: 'bg-lime-100 dark:bg-lime-900/80', border: 'border-lime-300 dark:border-lime-700', text: 'text-lime-800 dark:text-lime-200', dot: 'bg-lime-700 dark:bg-lime-300' },
-  RRHH: { bg: 'bg-rose-100 dark:bg-rose-900/80', border: 'border-rose-300 dark:border-rose-700', text: 'text-rose-800 dark:text-rose-200', dot: 'bg-rose-700 dark:bg-rose-300' },
-  Legal: { bg: 'bg-violet-100 dark:bg-violet-900/80', border: 'border-violet-300 dark:border-violet-700', text: 'text-violet-800 dark:text-violet-200', dot: 'bg-violet-700 dark:bg-violet-300' },
-  Marketing: { bg: 'bg-pink-100 dark:bg-pink-900/80', border: 'border-pink-300 dark:border-pink-700', text: 'text-pink-800 dark:text-pink-200', dot: 'bg-pink-700 dark:bg-pink-300' },
-  Ventas: { bg: 'bg-cyan-100 dark:bg-cyan-900/80', border: 'border-cyan-300 dark:border-cyan-700', text: 'text-cyan-800 dark:text-cyan-200', dot: 'bg-cyan-700 dark:bg-cyan-300' },
-  Logística: { bg: 'bg-orange-100 dark:bg-orange-900/80', border: 'border-orange-300 dark:border-orange-700', text: 'text-orange-800 dark:text-orange-200', dot: 'bg-orange-700 dark:bg-orange-300' },
-  Tecnología: { bg: 'bg-sky-100 dark:bg-sky-900/80', border: 'border-sky-300 dark:border-sky-700', text: 'text-sky-800 dark:text-sky-200', dot: 'bg-sky-700 dark:bg-sky-300' },
+  Management: { bg: 'bg-blue-50 dark:bg-blue-900/80', border: 'border-blue-300 dark:border-blue-700', text: 'text-blue-800 dark:text-blue-200', dot: 'bg-blue-700 dark:bg-blue-300' },
+  Administrativo: { bg: 'bg-emerald-50 dark:bg-emerald-900/80', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-800 dark:text-emerald-200', dot: 'bg-emerald-700 dark:bg-emerald-300' },
+  Operativo: { bg: 'bg-amber-50 dark:bg-amber-900/80', border: 'border-amber-300 dark:border-amber-700', text: 'text-amber-900 dark:text-amber-200', dot: 'bg-amber-700 dark:bg-amber-300' },
+  Arquitectura: { bg: 'bg-purple-50 dark:bg-purple-900/80', border: 'border-purple-300 dark:border-purple-700', text: 'text-purple-800 dark:text-purple-200', dot: 'bg-purple-700 dark:bg-purple-300' },
+  Externo: { bg: 'bg-gray-50 dark:bg-gray-800', border: 'border-gray-300 dark:border-gray-600', text: 'text-gray-800 dark:text-gray-200', dot: 'bg-gray-700 dark:bg-gray-300' },
+  Asesor: { bg: 'bg-indigo-50 dark:bg-indigo-900/80', border: 'border-indigo-300 dark:border-indigo-700', text: 'text-indigo-800 dark:text-indigo-200', dot: 'bg-indigo-700 dark:bg-indigo-300' },
+  Finanzas: { bg: 'bg-lime-50 dark:bg-lime-900/80', border: 'border-lime-300 dark:border-lime-700', text: 'text-lime-800 dark:text-lime-200', dot: 'bg-lime-700 dark:bg-lime-300' },
+  RRHH: { bg: 'bg-rose-50 dark:bg-rose-900/80', border: 'border-rose-300 dark:border-rose-700', text: 'text-rose-800 dark:text-rose-200', dot: 'bg-rose-700 dark:bg-rose-300' },
+  Legal: { bg: 'bg-violet-50 dark:bg-violet-900/80', border: 'border-violet-300 dark:border-violet-700', text: 'text-violet-800 dark:text-violet-200', dot: 'bg-violet-700 dark:bg-violet-300' },
+  Marketing: { bg: 'bg-pink-50 dark:bg-pink-900/80', border: 'border-pink-300 dark:border-pink-700', text: 'text-pink-800 dark:text-pink-200', dot: 'bg-pink-700 dark:bg-pink-300' },
+  Ventas: { bg: 'bg-cyan-50 dark:bg-cyan-900/80', border: 'border-cyan-300 dark:border-cyan-700', text: 'text-cyan-800 dark:text-cyan-200', dot: 'bg-cyan-700 dark:bg-cyan-300' },
+  Logística: { bg: 'bg-orange-50 dark:bg-orange-900/80', border: 'border-orange-300 dark:border-orange-700', text: 'text-orange-800 dark:text-orange-200', dot: 'bg-orange-700 dark:bg-orange-300' },
+  Tecnología: { bg: 'bg-sky-50 dark:bg-sky-900/80', border: 'border-sky-300 dark:border-sky-700', text: 'text-sky-800 dark:text-sky-200', dot: 'bg-sky-700 dark:bg-sky-300' },
 };
 
 const ROLE_OPTIONS = Object.keys(ROLE_BADGES) as RoleType[];
@@ -310,15 +312,15 @@ function buildAreaTree(peopleInArea: Person[]): { person: Person; depth: number 
 // High-contrast pill colors for custom tags — same bg-100/dark:bg-900 formula as
 // ROLE_BADGES so tags stay legible in both Modo Claro and Modo Oscuro.
 const TAG_COLOR_STYLES: Record<TagColorKey, { bg: string; border: string; text: string }> = {
-  slate: { bg: 'bg-slate-200 dark:bg-slate-800', border: 'border-slate-400 dark:border-slate-600', text: 'text-slate-900 dark:text-slate-100' },
-  red: { bg: 'bg-red-100 dark:bg-red-900/80', border: 'border-red-300 dark:border-red-700', text: 'text-red-800 dark:text-red-200' },
-  orange: { bg: 'bg-orange-100 dark:bg-orange-900/80', border: 'border-orange-300 dark:border-orange-700', text: 'text-orange-800 dark:text-orange-200' },
-  amber: { bg: 'bg-amber-100 dark:bg-amber-900/80', border: 'border-amber-300 dark:border-amber-700', text: 'text-amber-800 dark:text-amber-200' },
-  emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/80', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-800 dark:text-emerald-200' },
-  cyan: { bg: 'bg-cyan-100 dark:bg-cyan-900/80', border: 'border-cyan-300 dark:border-cyan-700', text: 'text-cyan-800 dark:text-cyan-200' },
-  blue: { bg: 'bg-blue-100 dark:bg-blue-900/80', border: 'border-blue-300 dark:border-blue-700', text: 'text-blue-800 dark:text-blue-200' },
-  violet: { bg: 'bg-violet-100 dark:bg-violet-900/80', border: 'border-violet-300 dark:border-violet-700', text: 'text-violet-800 dark:text-violet-200' },
-  pink: { bg: 'bg-pink-100 dark:bg-pink-900/80', border: 'border-pink-300 dark:border-pink-700', text: 'text-pink-800 dark:text-pink-200' },
+  slate: { bg: 'bg-slate-100 dark:bg-slate-800', border: 'border-slate-400 dark:border-slate-600', text: 'text-slate-900 dark:text-slate-100' },
+  red: { bg: 'bg-rose-50 dark:bg-red-900/80', border: 'border-rose-300 dark:border-red-700', text: 'text-rose-800 dark:text-red-200' },
+  orange: { bg: 'bg-orange-50 dark:bg-orange-900/80', border: 'border-orange-300 dark:border-orange-700', text: 'text-orange-800 dark:text-orange-200' },
+  amber: { bg: 'bg-amber-50 dark:bg-amber-900/80', border: 'border-amber-300 dark:border-amber-700', text: 'text-amber-900 dark:text-amber-200' },
+  emerald: { bg: 'bg-emerald-50 dark:bg-emerald-900/80', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-800 dark:text-emerald-200' },
+  cyan: { bg: 'bg-sky-50 dark:bg-cyan-900/80', border: 'border-sky-300 dark:border-cyan-700', text: 'text-sky-800 dark:text-cyan-200' },
+  blue: { bg: 'bg-blue-50 dark:bg-blue-900/80', border: 'border-blue-300 dark:border-blue-700', text: 'text-blue-800 dark:text-blue-200' },
+  violet: { bg: 'bg-purple-50 dark:bg-violet-900/80', border: 'border-purple-300 dark:border-violet-700', text: 'text-purple-800 dark:text-violet-200' },
+  pink: { bg: 'bg-pink-50 dark:bg-pink-900/80', border: 'border-pink-300 dark:border-pink-700', text: 'text-pink-800 dark:text-pink-200' },
 };
 
 const TAG_COLOR_OPTIONS = Object.keys(TAG_COLOR_STYLES) as TagColorKey[];
@@ -415,19 +417,21 @@ function getDueUrgency(dueDate: string | undefined, commitmentStatus: Commitment
   return { label: `${days}d restantes`, tone: 'green' };
 }
 
+// High-contrast pill colors — bg-50/border-300/text-800-900 formula in Modo
+// Claro, translucent bg-500/15 formula in Modo Oscuro (unchanged from before).
 const URGENCY_TONE_STYLES: Record<DueUrgency['tone'], string> = {
-  red: 'border-red-400/60 bg-red-500/15 text-red-200',
-  orange: 'border-orange-400/60 bg-orange-500/15 text-orange-200',
-  green: 'border-emerald-400/60 bg-emerald-500/15 text-emerald-200',
-  slate: 'border-slate-600 bg-slate-800/60 text-slate-300',
+  red: 'border-rose-300 bg-rose-50 text-rose-800 dark:border-red-400/60 dark:bg-red-500/15 dark:text-red-200',
+  orange: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-orange-400/60 dark:bg-orange-500/15 dark:text-orange-200',
+  green: 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-400/60 dark:bg-emerald-500/15 dark:text-emerald-200',
+  slate: 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-300',
 };
 
 const LICITATION_WORKFLOW_STYLES: Record<LicitationWorkflowStatus, string> = {
-  Cotizando: 'border-sky-500/50 bg-sky-500/15 text-sky-200',
-  'Preguntas Enviadas': 'border-violet-500/50 bg-violet-500/15 text-violet-200',
-  'En Elaboracion': 'border-amber-500/50 bg-amber-500/15 text-amber-100',
-  Presentada: 'border-emerald-500/50 bg-emerald-500/15 text-emerald-200',
-  Desestimada: 'border-slate-600 bg-slate-800/70 text-slate-300',
+  Cotizando: 'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-500/50 dark:bg-sky-500/15 dark:text-sky-200',
+  'Preguntas Enviadas': 'border-purple-300 bg-purple-50 text-purple-800 dark:border-violet-500/50 dark:bg-violet-500/15 dark:text-violet-200',
+  'En Elaboracion': 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/50 dark:bg-amber-500/15 dark:text-amber-100',
+  Presentada: 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-200',
+  Desestimada: 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800/70 dark:text-slate-300',
 };
 
 function getLicitationWorkflowStyle(status: LicitationWorkflowStatus | undefined) {
@@ -871,7 +875,7 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
     <>
       {parts.map((part, index) =>
         part.toLowerCase() === cleanQuery.toLowerCase() ? (
-          <mark key={`${part}-${index}`} className="rounded bg-amber-300/20 px-0.5 text-amber-100">
+          <mark key={`${part}-${index}`} className="rounded bg-amber-200 px-0.5 text-amber-900 dark:bg-amber-300/20 dark:text-amber-100">
             {part}
           </mark>
         ) : (
@@ -897,7 +901,7 @@ function ManagerLine({ managerName, dense = false }: { managerName?: string; den
   if (!managerName) return null;
 
   return (
-    <p className={`mt-1 inline-flex min-w-0 items-center gap-1 font-semibold text-sky-300/85 ${dense ? 'text-[10px]' : 'text-[11px]'}`}>
+    <p className={`mt-1 inline-flex min-w-0 items-center gap-1 font-semibold text-sky-700 dark:text-sky-300/85 ${dense ? 'text-[10px]' : 'text-[11px]'}`}>
       <CornerRightUp className="h-3 w-3 shrink-0" />
       <span className="truncate">Reporta a: {managerName}</span>
     </p>
@@ -945,7 +949,7 @@ function PersonBadges({
         event.stopPropagation();
         onToggleExpand?.();
       }}
-      className="inline-flex items-center gap-0.5 rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-[9px] font-bold text-slate-300 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
+      className="inline-flex items-center gap-0.5 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600 transition-colors hover:border-indigo-500/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:text-indigo-300"
       title={isCollapsed ? 'Mostrar todas las etiquetas' : 'Colapsar etiquetas'}
     >
       {isCollapsed ? `+${totalItems - 1} más` : 'Menos'}
@@ -961,7 +965,7 @@ function PersonBadges({
     return (
       <div className="mt-2 flex flex-wrap items-center gap-1.5 transition-all duration-200">
         {firstSkill && (
-          <span className="inline-flex items-center rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[9px] font-bold text-indigo-800 dark:border-indigo-700 dark:bg-indigo-900/80 dark:text-indigo-200">
+          <span className="inline-flex items-center rounded-full border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[9px] font-bold text-indigo-800 dark:border-indigo-700 dark:bg-indigo-900/80 dark:text-indigo-200">
             {firstSkill}
           </span>
         )}
@@ -986,7 +990,7 @@ function PersonBadges({
       {visibleSkills.map((skill) => (
         <span
           key={skill}
-          className="inline-flex items-center rounded-full border border-indigo-300 bg-indigo-100 px-2 py-0.5 text-[9px] font-bold text-indigo-800 dark:border-indigo-700 dark:bg-indigo-900/80 dark:text-indigo-200"
+          className="inline-flex items-center rounded-full border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[9px] font-bold text-indigo-800 dark:border-indigo-700 dark:bg-indigo-900/80 dark:text-indigo-200"
         >
           {skill}
         </span>
@@ -1000,7 +1004,7 @@ function PersonBadges({
         );
       })}
       {hiddenCount > 0 && (
-        <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-[9px] font-bold text-slate-400">
+        <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
           +{hiddenCount}
         </span>
       )}
@@ -1071,21 +1075,21 @@ function PersonCard({
       onMouseLeave={() => onHover?.(null)}
       className={`group rounded-xl border transition-all duration-200 ${dense ? 'p-2' : 'p-2.5'} ${
         selected
-          ? 'border-amber-400 bg-amber-950/30 shadow-[0_0_16px_rgba(251,191,36,0.18)]'
+          ? 'border-amber-400 bg-amber-50 shadow-[0_0_16px_rgba(251,191,36,0.18)] dark:bg-amber-950/30'
           : highlighted
-          ? 'border-cyan-400 bg-cyan-950/20 shadow-[0_0_18px_rgba(34,211,238,0.22)]'
+          ? 'border-cyan-400 bg-cyan-50 shadow-[0_0_18px_rgba(34,211,238,0.22)] dark:bg-cyan-950/20'
           : connectionMode && !readOnly
-          ? 'border-cyan-500/50 bg-slate-900/80 shadow-[0_0_12px_rgba(34,211,238,0.12)] hover:border-cyan-300'
-          : 'border-slate-800 bg-slate-900/75 hover:border-slate-700 hover:bg-slate-900'
+          ? 'border-cyan-500/50 bg-cyan-50/60 shadow-[0_0_12px_rgba(34,211,238,0.12)] hover:border-cyan-300 dark:bg-slate-900/80'
+          : 'border-slate-300 bg-white shadow-sm hover:shadow-md hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900/75 dark:shadow-none dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:hover:shadow-none'
       } ${isDragging ? 'opacity-30' : 'opacity-100'} cursor-pointer`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h4 className={`break-words font-display font-bold leading-tight text-slate-100 ${dense ? 'text-xs' : 'text-sm'}`}>
+          <h4 className={`break-words font-display font-bold leading-tight text-slate-900 dark:text-slate-100 ${dense ? 'text-xs' : 'text-sm'}`}>
             <HighlightedText text={person.name} query={searchQuery} />
           </h4>
           <ManagerLine managerName={managerName} dense={dense || compact} />
-          {!compact && <p className="mt-1 text-[11px] font-medium text-slate-500">{person.category}</p>}
+          {!compact && <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-500">{person.category}</p>}
         </div>
         {onOpenSummary && (
           <button
@@ -1094,7 +1098,7 @@ function PersonCard({
               event.stopPropagation();
               onOpenSummary(person.id);
             }}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+            className="rounded-lg border border-slate-300 bg-slate-100 p-1.5 text-slate-600 transition-colors hover:border-cyan-500/50 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:text-cyan-300"
             title="Ver hoja de funciones consolidada"
           >
             <ClipboardList className="h-3.5 w-3.5" />
@@ -1106,7 +1110,7 @@ function PersonCard({
             {...attributes}
             {...listeners}
             onClick={(event) => event.stopPropagation()}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
+            className="rounded-lg border border-slate-300 bg-slate-100 p-1.5 text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300"
             title="Arrastrar persona"
           >
             <GripVertical className="h-3.5 w-3.5" />
@@ -1119,7 +1123,7 @@ function PersonCard({
               event.stopPropagation();
               onConnect(person);
             }}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-400 transition-colors hover:border-amber-400/50 hover:text-amber-300"
+            className="rounded-lg border border-slate-300 bg-slate-100 p-1.5 text-slate-600 transition-colors hover:border-amber-400/50 hover:text-amber-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:text-amber-300"
             title="Crear conexión"
           >
             <Link2 className="h-3.5 w-3.5" />
@@ -1130,7 +1134,7 @@ function PersonCard({
       {!compact && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <RoleBadge role={person.role} />
-          <span className="rounded-md border border-slate-800 bg-slate-950 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+          <span className="rounded-md border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500">
             {person.id}
           </span>
         </div>
@@ -1214,21 +1218,21 @@ function AssignmentCard({
       onMouseLeave={() => onHover?.(null)}
       className={`group rounded-xl border transition-all duration-200 ${dense ? 'p-2' : 'p-2.5'} ${
         selected
-          ? 'border-amber-400 bg-amber-950/30 shadow-[0_0_16px_rgba(251,191,36,0.18)]'
+          ? 'border-amber-400 bg-amber-50 shadow-[0_0_16px_rgba(251,191,36,0.18)] dark:bg-amber-950/30'
           : highlighted
-          ? 'border-cyan-400 bg-cyan-950/20 shadow-[0_0_18px_rgba(34,211,238,0.22)]'
+          ? 'border-cyan-400 bg-cyan-50 shadow-[0_0_18px_rgba(34,211,238,0.22)] dark:bg-cyan-950/20'
           : connectionMode && !readOnly
-          ? 'border-cyan-500/50 bg-slate-900/80 shadow-[0_0_12px_rgba(34,211,238,0.12)] hover:border-cyan-300'
-          : 'border-slate-800 bg-slate-900/70 hover:border-slate-700 hover:bg-slate-900'
+          ? 'border-cyan-500/50 bg-cyan-50/60 shadow-[0_0_12px_rgba(34,211,238,0.12)] hover:border-cyan-300 dark:bg-slate-900/80'
+          : 'border-slate-300 bg-white shadow-sm hover:shadow-md hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900/70 dark:shadow-none dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:hover:shadow-none'
       } ${isDragging ? 'opacity-30' : 'opacity-100'} cursor-pointer`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h4 className={`break-words font-display font-bold leading-tight text-slate-100 ${dense ? 'text-xs' : 'text-sm'}`}>
+          <h4 className={`break-words font-display font-bold leading-tight text-slate-900 dark:text-slate-100 ${dense ? 'text-xs' : 'text-sm'}`}>
             <HighlightedText text={person.name} query={searchQuery} />
           </h4>
           <ManagerLine managerName={managerName} dense={dense || compact} />
-          {!compact && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{assignment.taskText || 'Sin función específica registrada.'}</p>}
+          {!compact && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">{assignment.taskText || 'Sin función específica registrada.'}</p>}
         </div>
         {onOpenSummary && (
           <button
@@ -1237,7 +1241,7 @@ function AssignmentCard({
               event.stopPropagation();
               onOpenSummary(person.id);
             }}
-            className="shrink-0 rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+            className="shrink-0 rounded-lg border border-slate-300 bg-slate-100 p-1.5 text-slate-600 transition-colors hover:border-cyan-500/50 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:text-cyan-300"
             title="Ver hoja de funciones consolidada"
           >
             <ClipboardList className="h-3.5 w-3.5" />
@@ -1253,7 +1257,7 @@ function AssignmentCard({
                   onMoveAssignment(assignment.id, 'up');
                 }}
                 disabled={!canMoveUp}
-                className="rounded-md border border-slate-700 bg-slate-950 p-0.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 disabled:cursor-not-allowed disabled:opacity-30"
+                className="rounded-md border border-slate-300 bg-slate-100 p-0.5 text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300"
                 title="Subir asignación"
               >
                 <ChevronUp className="h-3 w-3" />
@@ -1265,7 +1269,7 @@ function AssignmentCard({
                   onMoveAssignment(assignment.id, 'down');
                 }}
                 disabled={!canMoveDown}
-                className="rounded-md border border-slate-700 bg-slate-950 p-0.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 disabled:cursor-not-allowed disabled:opacity-30"
+                className="rounded-md border border-slate-300 bg-slate-100 p-0.5 text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300"
                 title="Bajar asignación"
               >
                 <ChevronDown className="h-3 w-3" />
@@ -1277,7 +1281,7 @@ function AssignmentCard({
                 event.stopPropagation();
                 onRemoveAssignment(assignment.id);
               }}
-              className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 opacity-70 transition-colors hover:border-red-400/50 hover:text-red-300 group-hover:opacity-100"
+              className="rounded-lg border border-slate-300 bg-slate-100 p-1.5 text-slate-600 opacity-70 transition-colors hover:border-red-400/50 hover:text-red-700 group-hover:opacity-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:text-red-300"
               title="Quitar de esta entidad"
             >
               <UserMinus className="h-3.5 w-3.5" />
@@ -1287,7 +1291,7 @@ function AssignmentCard({
               {...attributes}
               {...listeners}
               onClick={(event) => event.stopPropagation()}
-              className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
+              className="rounded-lg border border-slate-300 bg-slate-100 p-1.5 text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300"
               title="Arrastrar asignación"
             >
               <GripVertical className="h-3.5 w-3.5" />
@@ -1301,7 +1305,7 @@ function AssignmentCard({
               event.stopPropagation();
               onConnect(person);
             }}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-400 transition-colors hover:border-amber-400/50 hover:text-amber-300"
+            className="rounded-lg border border-slate-300 bg-slate-100 p-1.5 text-slate-600 transition-colors hover:border-amber-400/50 hover:text-amber-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:text-amber-300"
             title="Crear conexión"
           >
             <Link2 className="h-3.5 w-3.5" />
@@ -1312,7 +1316,7 @@ function AssignmentCard({
       {!compact && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <RoleBadge role={person.role} />
-          <span className="rounded-md border border-slate-800 bg-slate-950 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+          <span className="rounded-md border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500">
             {person.category}
           </span>
         </div>
@@ -1339,12 +1343,12 @@ function LicitationEntitySummary({ entity, leader }: { entity: BoardEntity; lead
         {workflowStatus}
       </span>
       {entity.code && (
-        <span className="rounded-md border border-white/25 bg-slate-950/40 px-2 py-0.5 text-[10px] font-extrabold text-white">
+        <span className="rounded-md border border-white/25 bg-black/40 px-2 py-0.5 text-[10px] font-extrabold text-white">
           ID {entity.code}
         </span>
       )}
       {entity.client && (
-        <span className="rounded-md border border-white/25 bg-slate-950/40 px-2 py-0.5 text-[10px] font-extrabold text-white">
+        <span className="rounded-md border border-white/25 bg-black/40 px-2 py-0.5 text-[10px] font-extrabold text-white">
           {entity.client}
         </span>
       )}
@@ -1470,21 +1474,21 @@ function PositionCard({
       data-person-id={assignedPersonId}
       className={`rounded-xl border p-2.5 transition-all ${
         isVacant
-          ? `border-dashed ${isOver ? 'border-amber-300 bg-amber-950/25' : 'border-amber-500/60 bg-amber-950/10'}`
-          : 'border-slate-800 bg-slate-900/70'
+          ? `border-dashed ${isOver ? 'border-amber-400 bg-amber-100 dark:border-amber-300 dark:bg-amber-950/25' : 'border-amber-500/70 bg-amber-50 dark:border-amber-500/60 dark:bg-amber-950/10'}`
+          : 'border-slate-300 bg-white shadow-sm hover:shadow-md dark:border-slate-800 dark:bg-slate-900/70 dark:shadow-none'
       } ${isDragging ? 'opacity-40' : 'opacity-100'}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <h5 className="min-w-0 truncate font-display text-xs font-bold leading-tight text-slate-100">{position.title}</h5>
+            <h5 className="min-w-0 truncate font-display text-xs font-bold leading-tight text-slate-900 dark:text-slate-100">{position.title}</h5>
             {!isVacant && (
-              <span className="shrink-0 rounded-full border border-cyan-700/60 bg-cyan-950/50 px-2 py-0.5 text-[9px] font-black text-cyan-200">
+              <span className="shrink-0 rounded-full border border-cyan-300 bg-cyan-600 px-2 py-0.5 text-[9px] font-black text-white dark:border-cyan-700/60 dark:bg-cyan-950/50 dark:text-cyan-200">
                 {formatFte(position.fte)} FTE
               </span>
             )}
           </div>
-          {position.department && <p className="mt-0.5 truncate text-[10px] font-medium text-slate-500">{position.department}</p>}
+          {position.department && <p className="mt-0.5 truncate text-[10px] font-medium text-slate-600 dark:text-slate-500">{position.department}</p>}
           {position.dueDate && (
             <div className="mt-1.5">
               <DueDateBadge dueDate={position.dueDate} commitmentStatus={position.commitmentStatus} />
@@ -1496,13 +1500,13 @@ function PositionCard({
               style={personDragStyle}
               {...personDragAttributes}
               {...personDragListeners}
-              className={`mt-1.5 flex min-w-0 cursor-grab items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/45 px-2 py-1 active:cursor-grabbing ${
+              className={`mt-1.5 flex min-w-0 cursor-grab items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-2 py-1 active:cursor-grabbing dark:border-slate-800 dark:bg-slate-950/45 ${
                 isPersonDragging ? 'opacity-35' : 'opacity-100'
               }`}
               title="Arrastrar persona a otro puesto, entidad o Banco"
             >
               <GripVertical className="h-3 w-3 shrink-0 text-slate-500" />
-              <p className="min-w-0 flex-1 truncate text-xs font-bold text-slate-100">{assignedPerson.name}</p>
+              <p className="min-w-0 flex-1 truncate text-xs font-bold text-slate-900 dark:text-slate-100">{assignedPerson.name}</p>
               <RoleBadge role={assignedPerson.role} />
             </div>
           )}
@@ -1512,7 +1516,7 @@ function PositionCard({
               <button
                 type="button"
                 onClick={() => setTasksOpen((prev) => !prev)}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-[9px] font-bold text-slate-400 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
+                className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600 transition-colors hover:border-indigo-500/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:text-indigo-300"
                 title={tasksOpen ? 'Ocultar funciones' : 'Ver / editar funciones específicas de este puesto'}
               >
                 <ClipboardList className="h-2.5 w-2.5" />
@@ -1520,7 +1524,7 @@ function PositionCard({
                 {tasksOpen ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
               </button>
               {!tasksOpen && tasks.length > 0 && (
-                <p className="mt-1 truncate text-[9px] italic text-slate-500">
+                <p className="mt-1 truncate text-[9px] italic text-slate-600 dark:text-slate-500">
                   {tasks.slice(0, 2).map(taskLabel).join(' · ')}
                 </p>
               )}
@@ -1528,16 +1532,16 @@ function PositionCard({
           )}
         </div>
         {isVacant ? (
-          <span className="shrink-0 rounded-full border border-amber-400/60 bg-amber-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-300">
+          <span className="shrink-0 rounded-full border border-amber-300 bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-950 dark:border-amber-400/60 dark:bg-amber-500/20 dark:text-amber-300">
             Vacante
           </span>
         ) : null}
       </div>
 
       {tasksOpen && (
-        <div className="mt-2 space-y-1.5 rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+        <div className="mt-2 space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950/60">
           {tasks.length === 0 ? (
-            <p className="text-[10px] text-slate-500">Sin funciones específicas registradas todavía.</p>
+            <p className="text-[10px] text-slate-600 dark:text-slate-500">Sin funciones específicas registradas todavía.</p>
           ) : (
             <ul className="space-y-1">
               {tasks.map((task, taskIndex) => (
@@ -1547,18 +1551,18 @@ function PositionCard({
                     disabled={readOnly}
                     onClick={() => onToggleTask(entityId, position.id, taskIndex)}
                     className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded border transition-colors ${
-                      isTaskDone(task) ? 'border-emerald-500 bg-emerald-500/70' : 'border-slate-600 bg-transparent hover:border-slate-500'
+                      isTaskDone(task) ? 'border-emerald-500 bg-emerald-500/70' : 'border-slate-400 bg-transparent hover:border-slate-500 dark:border-slate-600'
                     } disabled:cursor-not-allowed`}
                     title={isTaskDone(task) ? 'Marcar como pendiente' : 'Marcar como completada'}
                   />
-                  <span className={`min-w-0 flex-1 break-words text-[10.5px] leading-snug ${isTaskDone(task) ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+                  <span className={`min-w-0 flex-1 break-words text-[10.5px] leading-snug ${isTaskDone(task) ? 'text-slate-500 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                     {taskLabel(task)}
                   </span>
                   {!readOnly && (
                     <button
                       type="button"
                       onClick={() => onRemoveTask(entityId, position.id, taskIndex)}
-                      className="shrink-0 text-slate-600 transition-colors hover:text-red-300"
+                      className="shrink-0 text-slate-500 transition-colors hover:text-red-600 dark:text-slate-600 dark:hover:text-red-300"
                       title="Quitar función"
                     >
                       <X className="h-3 w-3" />
@@ -1580,12 +1584,12 @@ function PositionCard({
                   }
                 }}
                 placeholder="Nueva función…"
-                className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-indigo-500"
+                className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[10px] text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
               />
               <button
                 type="button"
                 onClick={submitNewTask}
-                className="shrink-0 rounded-md border border-indigo-500/40 bg-indigo-950/30 px-2 text-[10px] font-bold text-indigo-300 transition-colors hover:bg-indigo-950/50"
+                className="shrink-0 rounded-md border border-indigo-300 bg-indigo-50 px-2 text-[10px] font-bold text-indigo-800 transition-colors hover:bg-indigo-100 dark:border-indigo-500/40 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
                 title="Agregar función"
               >
                 <Plus className="h-3 w-3" />
@@ -1601,7 +1605,7 @@ function PositionCard({
             <button
               type="button"
               onClick={() => onUnassign(entityId, position.id)}
-              className="shrink-0 rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-400 transition-colors hover:border-amber-400/50 hover:text-amber-300"
+              className="shrink-0 rounded-lg border border-slate-300 bg-slate-100 p-1.5 text-slate-600 transition-colors hover:border-amber-400/50 hover:text-amber-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:text-amber-300"
               title="Desasignar (el puesto sigue existiendo, vacante)"
             >
               <UserMinus className="h-3.5 w-3.5" />
@@ -1614,7 +1618,7 @@ function PositionCard({
             <select
               value={pickedPersonId}
               onChange={(event) => setPickedPersonId(event.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 outline-none focus:border-amber-500"
+              className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-900 outline-none focus:border-amber-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
             >
               <option value="">Elegir persona…</option>
               {people.map((candidate) => (
@@ -1625,7 +1629,7 @@ function PositionCard({
               <select
                 value={pickedFte}
                 onChange={(event) => setPickedFte(Number(event.target.value))}
-                className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 outline-none focus:border-amber-500"
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-900 outline-none focus:border-amber-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
               >
                 {FTE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label} FTE</option>
@@ -1639,23 +1643,23 @@ function PositionCard({
                   setPickedPersonId('');
                   setPickedFte(1);
                 }}
-                className="shrink-0 rounded-lg border border-emerald-500/40 bg-emerald-950/30 px-2.5 py-1.5 text-[11px] font-bold text-emerald-300 transition-colors hover:bg-emerald-950/50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="shrink-0 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-bold text-emerald-800 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-emerald-500/40 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-950/50"
               >
                 Asignar
               </button>
             </div>
-            <p className="text-[9px] leading-relaxed text-slate-500">O arrastra una persona del Banco hasta aquí para ocupar el puesto.</p>
+            <p className="text-[9px] leading-relaxed text-slate-600 dark:text-slate-500">O arrastra una persona del Banco hasta aquí para ocupar el puesto.</p>
           </div>
         )
       )}
 
       {!readOnly && (
-        <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-slate-800/70 pt-2">
+        <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-slate-200 pt-2 dark:border-slate-800/70">
           <button
             type="button"
             onClick={() => onMove(position.id, 'up')}
             disabled={!canMoveUp}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 disabled:cursor-not-allowed disabled:opacity-30"
+            className="rounded-lg border border-slate-300 bg-slate-100 p-1 text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300"
             title="Subir puesto"
           >
             <ChevronUp className="h-3 w-3" />
@@ -1664,7 +1668,7 @@ function PositionCard({
             type="button"
             onClick={() => onMove(position.id, 'down')}
             disabled={!canMoveDown}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 disabled:cursor-not-allowed disabled:opacity-30"
+            className="rounded-lg border border-slate-300 bg-slate-100 p-1 text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300"
             title="Bajar puesto"
           >
             <ChevronDown className="h-3 w-3" />
@@ -1673,7 +1677,7 @@ function PositionCard({
             type="button"
             {...positionAttributes}
             {...positionListeners}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
+            className="rounded-lg border border-slate-300 bg-slate-100 p-1 text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300"
             title="Arrastrar puesto"
           >
             <GripVertical className="h-3 w-3" />
@@ -1681,7 +1685,7 @@ function PositionCard({
           <button
             type="button"
             onClick={() => onEdit(position, entityId)}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
+            className="rounded-lg border border-slate-300 bg-slate-100 p-1 text-slate-600 transition-colors hover:border-indigo-500/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:text-indigo-300"
             title="Editar puesto"
           >
             <Edit2 className="h-3 w-3" />
@@ -1689,7 +1693,7 @@ function PositionCard({
           <button
             type="button"
             onClick={() => onDelete(entityId, position.id)}
-            className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-red-400/50 hover:text-red-300"
+            className="rounded-lg border border-slate-300 bg-slate-100 p-1 text-slate-600 transition-colors hover:border-red-400/50 hover:text-red-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500 dark:hover:text-red-300"
             title="Eliminar puesto"
           >
             <Trash2 className="h-3 w-3" />
@@ -1819,15 +1823,15 @@ function EntityColumn({
     <section
       ref={setNodeRef}
       style={columnStyle}
-      className={`flex h-auto flex-col overflow-hidden rounded-2xl border-2 bg-slate-900/45 backdrop-blur-md transition-all ${
+      className={`flex h-auto flex-col overflow-hidden rounded-2xl border-2 bg-slate-50 shadow-sm backdrop-blur-md transition-all dark:bg-slate-900/45 dark:shadow-none ${
         fitMode ? 'w-full min-w-0' : 'w-[280px] min-w-[280px] shrink-0 snap-start'
-      } ${isColumnDragging ? 'opacity-40' : 'opacity-100'} ${isOver ? 'border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.22)]' : 'border-slate-800/80'}`}
+      } ${isColumnDragging ? 'opacity-40' : 'opacity-100'} ${isOver ? 'border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.22)]' : 'border-slate-300/80 dark:border-slate-800/80'}`}
     >
       <header className={`border-b bg-gradient-to-r ${meta.className} ${fitMode ? 'p-2.5' : 'p-3'}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-slate-950/35 font-bold uppercase tracking-wider text-white ${
+              className={`inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/35 font-bold uppercase tracking-wider text-white ${
                 fitMode ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[10px]'
               }`}
             >
@@ -1844,7 +1848,7 @@ function EntityColumn({
             {!fitMode && <p className="mt-1 line-clamp-2 min-h-[32px] text-xs leading-relaxed text-white/80">{entity.description}</p>}
           </div>
           <div className="flex flex-col items-end gap-2">
-            <span className={`rounded-full border border-white/20 bg-slate-950/35 font-bold text-white ${fitMode ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'}`}>{participantCount}</span>
+            <span className={`rounded-full border border-white/20 bg-black/35 font-bold text-white ${fitMode ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'}`}>{participantCount}</span>
             {!readOnly && (
               <div className="flex items-center gap-1.5">
                 <button
@@ -1852,7 +1856,7 @@ function EntityColumn({
                   ref={setColumnDragRef}
                   {...columnAttributes}
                   {...columnListeners}
-                  className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white active:cursor-grabbing"
+                  className="rounded-lg border border-white/20 bg-black/35 p-1.5 text-white/80 transition-colors hover:bg-black/55 hover:text-white active:cursor-grabbing"
                   title="Arrastrar columna"
                 >
                   <GripHorizontal className="h-3.5 w-3.5" />
@@ -1861,7 +1865,7 @@ function EntityColumn({
                   type="button"
                   onClick={() => onMoveEntity(entity.id, 'left')}
                   disabled={!canMoveLeft}
-                  className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+                  className="rounded-lg border border-white/20 bg-black/35 p-1.5 text-white/80 transition-colors hover:bg-black/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
                   title="Mover columna a la izquierda"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
@@ -1870,7 +1874,7 @@ function EntityColumn({
                   type="button"
                   onClick={() => onMoveEntity(entity.id, 'right')}
                   disabled={!canMoveRight}
-                  className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+                  className="rounded-lg border border-white/20 bg-black/35 p-1.5 text-white/80 transition-colors hover:bg-black/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
                   title="Mover columna a la derecha"
                 >
                   <ChevronRight className="h-3.5 w-3.5" />
@@ -1878,7 +1882,7 @@ function EntityColumn({
                 <button
                   type="button"
                   onClick={() => onEditEntity(entity)}
-                  className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white"
+                  className="rounded-lg border border-white/20 bg-black/35 p-1.5 text-white/80 transition-colors hover:bg-black/55 hover:text-white"
                   title="Editar entidad"
                 >
                   <Edit2 className="h-3.5 w-3.5" />
@@ -1886,7 +1890,7 @@ function EntityColumn({
                 <button
                   type="button"
                   onClick={() => onDeleteEntity(entity)}
-                  className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:border-red-300/60 hover:bg-red-950/50 hover:text-red-200"
+                  className="rounded-lg border border-white/20 bg-black/35 p-1.5 text-white/80 transition-colors hover:border-red-300/60 hover:bg-red-950/50 hover:text-red-200"
                   title="Eliminar entidad"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1899,14 +1903,14 @@ function EntityColumn({
 
       <div className={`overflow-visible ${fitMode ? 'space-y-1.5 p-2' : 'space-y-2 p-2.5'}`}>
         {entity.type === 'licitacion' && !readOnly && (
-          <div className="grid gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-2">
+          <div className="grid gap-2 rounded-xl border border-amber-300 bg-amber-50 p-2 dark:border-amber-500/20 dark:bg-amber-500/10">
             <div className="grid gap-2">
-              <label className="text-[10px] font-extrabold uppercase tracking-wider text-amber-200">
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-200">
                 Lider de licitacion
                 <select
                   value={entity.leaderPersonId || ''}
                   onChange={(event) => onUpdateLicitationLeader(entity.id, event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs font-semibold text-slate-100 outline-none focus:border-amber-500"
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-900 outline-none focus:border-amber-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 >
                   <option value="">Sin lider</option>
                   {people.map((person) => (
@@ -1914,12 +1918,12 @@ function EntityColumn({
                   ))}
                 </select>
               </label>
-              <label className="text-[10px] font-extrabold uppercase tracking-wider text-amber-200">
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-200">
                 Estado de avance
                 <select
                   value={entity.workflowStatus || 'Cotizando'}
                   onChange={(event) => onUpdateLicitationWorkflowStatus(entity.id, event.target.value as LicitationWorkflowStatus)}
-                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs font-semibold text-slate-100 outline-none focus:border-amber-500"
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-900 outline-none focus:border-amber-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 >
                   {LICITATION_WORKFLOW_STATUS_OPTIONS.map((status) => (
                     <option key={status} value={status}>{status}</option>
@@ -1930,7 +1934,7 @@ function EntityColumn({
             <button
               type="button"
               onClick={() => onDismissLicitation(entity)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-2 py-1.5 text-[10px] font-bold text-red-200 transition-colors hover:bg-red-500/20"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 px-2 py-1.5 text-[10px] font-bold text-rose-800 transition-colors hover:bg-rose-100 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Desestimar / Borrar
@@ -1939,12 +1943,12 @@ function EntityColumn({
         )}
         <div className={fitMode ? 'pb-1' : 'pb-1.5'}>
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Puestos ({positions.length})</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-500">Puestos ({positions.length})</span>
             {!readOnly && (
               <button
                 type="button"
                 onClick={() => onAddPosition(entity.id)}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-300 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700 transition-colors hover:border-emerald-500/50 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:text-emerald-300"
                 title="Crear puesto en esta entidad"
               >
                 <Plus className="h-3 w-3" />
@@ -1953,7 +1957,7 @@ function EntityColumn({
             )}
           </div>
           {positions.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-slate-800 p-2 text-center text-[10px] text-slate-500">Sin puestos definidos todavía.</p>
+            <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-2 text-center text-[10px] text-slate-600 dark:border-slate-800 dark:bg-transparent dark:text-slate-500">Sin puestos definidos todavía.</p>
           ) : (
             <SortableContext items={positions.map((position) => `position:${position.id}`)} strategy={verticalListSortingStrategy}>
               <div className="space-y-1.5">
@@ -1982,8 +1986,8 @@ function EntityColumn({
         </div>
 
         {quickAssignments.length > 0 && (
-          <div className="border-t border-slate-800/70 pt-2">
-            <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Participantes sin puesto ({quickAssignments.length})</span>
+          <div className="border-t border-slate-200 pt-2 dark:border-slate-800/70">
+            <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-500">Participantes sin puesto ({quickAssignments.length})</span>
             <SortableContext items={quickAssignments.map((assignment) => `assignment:${assignment.id}`)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
                 {quickAssignments.map((assignment, assignmentIndex) => {
@@ -2045,7 +2049,7 @@ function HoldingCard({
       : { border: 'border-cyan-300/50', iconBg: 'bg-cyan-400', label: 'text-cyan-700 dark:text-cyan-300', editBorder: 'border-cyan-300/50 hover:bg-cyan-400/20' };
 
   return (
-    <div className={`holding-card relative z-10 rounded-xl border ${accentClasses.border} bg-slate-900/80 p-3 shadow-lg`}>
+    <div className={`holding-card relative z-10 rounded-xl border ${accentClasses.border} bg-white p-3 shadow-md dark:bg-slate-900/80 dark:shadow-lg`}>
       <div className="flex items-start gap-3">
         <div className={`rounded-xl ${accentClasses.iconBg} p-2 text-slate-950`}>
           <Icon className="h-4 w-4" />
@@ -2059,7 +2063,7 @@ function HoldingCard({
               <button
                 type="button"
                 onClick={() => onEdit(member)}
-                className={`rounded-lg border ${accentClasses.editBorder} bg-slate-950/10 p-1 text-slate-700 transition-colors dark:text-slate-200`}
+                className={`rounded-lg border ${accentClasses.editBorder} bg-slate-100 p-1 text-slate-700 transition-colors dark:bg-slate-950/10 dark:text-slate-200`}
                 title="Editar miembro"
               >
                 <Edit2 className="h-3 w-3" />
@@ -2091,12 +2095,12 @@ function HoldingColumn({
 
   return (
     <section
-      className={`holding-column z-30 flex h-auto shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-slate-950/85 shadow-[0_0_24px_rgba(245,158,11,0.16)] backdrop-blur-md ${
+      className={`holding-column z-30 flex h-auto shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-amber-50/70 shadow-[0_0_24px_rgba(245,158,11,0.08)] backdrop-blur-md dark:bg-slate-950/85 dark:shadow-[0_0_24px_rgba(245,158,11,0.16)] ${
         fitMode ? 'w-[260px] min-w-[260px]' : 'w-[280px] min-w-[280px] snap-start'
       }`}
     >
       <header className={`border-b border-amber-400/30 bg-gradient-to-r from-amber-500 to-yellow-500 ${fitMode ? 'p-2.5' : 'p-3'}`}>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-950/35 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/35 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
           <Crown className="h-3 w-3" />
           Directorio / Holding
         </span>
@@ -2109,16 +2113,16 @@ function HoldingColumn({
 
         {level0 && <HoldingCard member={level0} icon={Crown} accent="amber" readOnly={readOnly} onEdit={onEditMember} />}
 
-        <div className="z-10 mx-auto my-3 rounded-full border border-amber-300/50 bg-slate-950 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+        <div className="z-10 mx-auto my-3 rounded-full border border-amber-400 bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-slate-950 shadow-sm dark:border-amber-300/50 dark:bg-slate-950 dark:text-amber-300 dark:shadow-none">
           reporta / asesora
         </div>
 
         {level1 && <HoldingCard member={level1} icon={User} accent="cyan" readOnly={readOnly} onEdit={onEditMember} />}
 
-        <div className="mt-3 flex flex-col items-center justify-center rounded-xl border border-dashed border-cyan-400/40 bg-slate-900/45 p-3 text-center">
+        <div className="mt-3 flex flex-col items-center justify-center rounded-xl border border-dashed border-cyan-400 bg-white/70 p-3 text-center dark:border-cyan-400/40 dark:bg-slate-900/45">
           <Network className="mb-2 h-5 w-5 text-cyan-700 dark:text-cyan-300" />
           <p className="text-xs font-bold text-slate-900 dark:text-slate-200">Las entidades del tablero reportan operativamente a Rafael.</p>
-          <p className="mt-1 text-[10px] leading-relaxed text-slate-500">La estructura sigue horizontal; esta columna solo fija la referencia de decisión.</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-slate-600 dark:text-slate-500">La estructura sigue horizontal; esta columna solo fija la referencia de decisión.</p>
         </div>
       </div>
     </section>
@@ -2181,7 +2185,7 @@ function BankPersonEntry({
   }, [assignableEntities, selectedEntityId]);
 
   return (
-    <div className="rounded-xl border border-slate-800/60 bg-slate-900/30 p-1.5">
+    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-1.5 dark:border-slate-800/60 dark:bg-slate-900/30">
       <PersonCard
         person={person}
         searchQuery={searchQuery}
@@ -2202,7 +2206,7 @@ function BankPersonEntry({
           <button
             type="button"
             onClick={() => onEditPerson(person)}
-            className="shrink-0 rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-400 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
+            className="shrink-0 rounded-lg border border-slate-300 bg-slate-100 p-1.5 text-slate-600 transition-colors hover:border-indigo-500/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:text-indigo-300"
             title="Editar persona"
           >
             <Edit2 className="h-3.5 w-3.5" />
@@ -2210,7 +2214,7 @@ function BankPersonEntry({
           <button
             type="button"
             onClick={() => onDeletePerson(person.id)}
-            className="shrink-0 rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-400 transition-colors hover:border-red-400/50 hover:text-red-300"
+            className="shrink-0 rounded-lg border border-slate-300 bg-slate-100 p-1.5 text-slate-600 transition-colors hover:border-red-400/50 hover:text-red-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:text-red-300"
             title="Eliminar persona"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -2220,7 +2224,7 @@ function BankPersonEntry({
               <select
                 value={selectedEntityId}
                 onChange={(event) => setSelectedEntityId(event.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 outline-none focus:border-emerald-500"
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
               >
                 {assignableEntities.map((entity) => (
                   <option key={entity.id} value={entity.id}>
@@ -2231,14 +2235,14 @@ function BankPersonEntry({
               <button
                 type="button"
                 onClick={() => selectedEntityId && onAssign(person.id, selectedEntityId)}
-                className="shrink-0 rounded-lg border border-emerald-500/40 bg-emerald-950/30 p-1.5 text-emerald-300 transition-colors hover:bg-emerald-950/50"
+                className="shrink-0 rounded-lg border border-emerald-300 bg-emerald-50 p-1.5 text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-950/50"
                 title="Asignar a la entidad seleccionada"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </>
           ) : (
-            <span className="flex-1 truncate text-[10px] text-slate-500">Ya participa en todas las entidades.</span>
+            <span className="flex-1 truncate text-[10px] text-slate-600 dark:text-slate-500">Ya participa en todas las entidades.</span>
           )}
         </div>
       )}
@@ -2266,14 +2270,16 @@ function BankDropButton({
       ref={setNodeRef}
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold text-slate-200 shadow-md transition-colors ${
-        isOver ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-slate-800 bg-slate-900 hover:border-slate-700'
+      className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition-colors dark:text-slate-200 dark:shadow-md ${
+        isOver
+          ? 'border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-300 dark:bg-amber-500/20 dark:text-amber-100'
+          : 'border-slate-300 bg-white hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700'
       }`}
       title="Abrir el banco de personas o soltar aquí para liberar un puesto"
     >
       <Users className="h-3.5 w-3.5" />
       Banco de Personas
-      <span className="rounded-full bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-extrabold text-indigo-300">{count}</span>
+      <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-extrabold text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300">{count}</span>
     </button>
   );
 }
@@ -2350,21 +2356,21 @@ function BankDrawer({
       <div className="fixed inset-0 z-[75] bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
       <aside
         ref={setNodeRef}
-        className={`fixed inset-y-0 left-0 z-[76] flex w-full max-w-md flex-col border-r bg-slate-950/95 shadow-2xl backdrop-blur-xl transition-colors ${
-          isOver ? 'border-amber-300 ring-2 ring-amber-300/40' : 'border-slate-800'
+        className={`fixed inset-y-0 left-0 z-[76] flex w-full max-w-md flex-col border-r bg-white/98 shadow-2xl backdrop-blur-xl transition-colors dark:bg-slate-950/95 ${
+          isOver ? 'border-amber-400 ring-2 ring-amber-300/40' : 'border-slate-300 dark:border-slate-800'
         }`}
       >
-        <header className="shrink-0 border-b border-slate-800 p-5">
+        <header className="shrink-0 border-b border-slate-200 p-5 dark:border-slate-800">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                 <Users className="h-3 w-3" />
                 Banco de Personas
               </span>
-              <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-white">Equipo disponible</h2>
-              <p className="mt-1 text-xs text-slate-500">{totalCount} personas registradas. Asígnalas directamente a cualquier entidad sin arrastrar.</p>
+              <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-slate-900 dark:text-white">Equipo disponible</h2>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-500">{totalCount} personas registradas. Asígnalas directamente a cualquier entidad sin arrastrar.</p>
             </div>
-            <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-slate-900 hover:text-white">
+            <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -2387,33 +2393,33 @@ function BankDrawer({
                 value={searchQuery}
                 onChange={(event) => onSearchChange(event.target.value)}
                 placeholder="Buscar por nombre, rol, categoría, nota o contacto..."
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-9 pr-3 text-xs text-slate-200 outline-none transition focus:border-indigo-500"
+                className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 outline-none transition focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-2">
+              <div className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-2.5 py-2 dark:border-slate-800 dark:bg-slate-950">
                 <Filter className="h-3.5 w-3.5 shrink-0 text-slate-500" />
                 <select
                   value={roleFilter}
                   onChange={(event) => onRoleFilterChange(event.target.value as 'Todos' | RoleType)}
-                  className="w-full min-w-0 bg-transparent text-[11px] font-semibold text-slate-200 outline-none"
+                  className="w-full min-w-0 bg-transparent text-[11px] font-semibold text-slate-900 outline-none dark:text-slate-200"
                 >
-                  <option value="Todos" className="bg-slate-950">Todos los roles</option>
+                  <option value="Todos" className="bg-white dark:bg-slate-950">Todos los roles</option>
                   {ROLE_OPTIONS.map((role) => (
-                    <option key={role} value={role} className="bg-slate-950">{role}</option>
+                    <option key={role} value={role} className="bg-white dark:bg-slate-950">{role}</option>
                   ))}
                 </select>
               </div>
-              <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-2">
+              <div className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-2.5 py-2 dark:border-slate-800 dark:bg-slate-950">
                 <Filter className="h-3.5 w-3.5 shrink-0 text-slate-500" />
                 <select
                   value={categoryFilter}
                   onChange={(event) => onCategoryFilterChange(event.target.value)}
-                  className="w-full min-w-0 bg-transparent text-[11px] font-semibold text-slate-200 outline-none"
+                  className="w-full min-w-0 bg-transparent text-[11px] font-semibold text-slate-900 outline-none dark:text-slate-200"
                 >
-                  <option value="Todas" className="bg-slate-950">Todas las categorías</option>
+                  <option value="Todas" className="bg-white dark:bg-slate-950">Todas las categorías</option>
                   {categoryOptions.map((category) => (
-                    <option key={category} value={category} className="bg-slate-950">{category}</option>
+                    <option key={category} value={category} className="bg-white dark:bg-slate-950">{category}</option>
                   ))}
                 </select>
               </div>
@@ -2423,7 +2429,7 @@ function BankDrawer({
 
         <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
           {people.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-500">
+            <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-xs text-slate-600 dark:border-slate-800 dark:bg-transparent dark:text-slate-500">
               Ninguna persona coincide con la búsqueda o los filtros aplicados.
             </p>
           ) : (
@@ -2649,7 +2655,7 @@ function MindMapModal({
         <div className="flex-1 overflow-auto p-4 lg:p-6">
           <div className="relative mx-auto min-h-[calc(100vh-9rem)] min-w-[1180px] max-w-[1800px] pb-8">
             <svg
-              className="pointer-events-none absolute left-0 top-0 h-[520px] w-full text-slate-400 dark:text-cyan-300"
+              className="pointer-events-none absolute left-0 top-0 h-[520px] w-full text-slate-700 opacity-85 dark:text-cyan-300 dark:opacity-100"
               viewBox="0 0 1200 520"
               preserveAspectRatio="none"
               aria-hidden="true"
@@ -2660,10 +2666,10 @@ function MindMapModal({
                 </marker>
               </defs>
               <path d="M600 74 C600 105 600 120 600 150" fill="none" stroke="currentColor" strokeWidth="2.5" markerEnd="url(#mindmap-arrow)" />
-              <path d="M600 220 C600 250 155 235 155 294" fill="none" stroke="currentColor" strokeWidth="2" markerEnd="url(#mindmap-arrow)" />
-              <path d="M600 220 C600 255 450 245 450 294" fill="none" stroke="currentColor" strokeWidth="2" markerEnd="url(#mindmap-arrow)" />
-              <path d="M600 220 C600 255 750 245 750 294" fill="none" stroke="currentColor" strokeWidth="2" markerEnd="url(#mindmap-arrow)" />
-              <path d="M600 220 C600 250 1045 235 1045 294" fill="none" stroke="currentColor" strokeWidth="2" markerEnd="url(#mindmap-arrow)" />
+              <path d="M600 220 C600 250 155 235 155 294" fill="none" stroke="currentColor" strokeWidth="2.5" markerEnd="url(#mindmap-arrow)" />
+              <path d="M600 220 C600 255 450 245 450 294" fill="none" stroke="currentColor" strokeWidth="2.5" markerEnd="url(#mindmap-arrow)" />
+              <path d="M600 220 C600 255 750 245 750 294" fill="none" stroke="currentColor" strokeWidth="2.5" markerEnd="url(#mindmap-arrow)" />
+              <path d="M600 220 C600 250 1045 235 1045 294" fill="none" stroke="currentColor" strokeWidth="2.5" markerEnd="url(#mindmap-arrow)" />
             </svg>
 
             <div className="relative z-10 flex flex-col items-center gap-4 pt-2">
@@ -2744,7 +2750,7 @@ function MindMapModal({
 
                               <div className="mt-3 border-l-2 border-slate-200 pl-3 dark:border-slate-700">
                                 {assignedPeople.length === 0 ? (
-                                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">Sin personas asignadas.</p>
+                                  <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-500">Sin personas asignadas.</p>
                                 ) : (
                                   <div className="space-y-2">
                                     {assignedPeople.map(({ assignment, person }) => {
@@ -2824,12 +2830,12 @@ function PositionTaskQuickAdd({
           }
         }}
         placeholder="Nueva función…"
-        className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-indigo-500"
+        className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[10px] text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
       />
       <button
         type="button"
         onClick={submit}
-        className="shrink-0 rounded-md border border-indigo-500/40 bg-indigo-950/30 px-2 text-[10px] font-bold text-indigo-300 transition-colors hover:bg-indigo-950/50"
+        className="shrink-0 rounded-md border border-indigo-300 bg-indigo-50 px-2 text-[10px] font-bold text-indigo-800 transition-colors hover:bg-indigo-100 dark:border-indigo-500/40 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
         title="Agregar función"
       >
         <Plus className="h-3 w-3" />
@@ -2898,26 +2904,26 @@ function PersonTaskSummaryModal({
   );
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl"
+        className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-300 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-800 p-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 p-5 dark:border-slate-800">
           <div className="min-w-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
               <ClipboardList className="h-3 w-3" />
               Hoja de Funciones y Tareas
             </span>
-            <h2 className="mt-3 break-words font-display text-xl font-extrabold leading-tight text-white">{person.name}</h2>
+            <h2 className="mt-3 break-words font-display text-xl font-extrabold leading-tight text-slate-900 dark:text-white">{person.name}</h2>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <RoleBadge role={person.role} />
-              <span className="rounded-md border border-slate-800 bg-slate-950 px-2 py-0.5 text-[10px] font-semibold text-slate-400">{person.category}</span>
+              <span className="rounded-md border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">{person.category}</span>
               <span
                 className={`rounded-md border px-2 py-0.5 text-[10px] font-black ${
                   totalFte > 1
-                    ? 'border-amber-400/60 bg-amber-500/10 text-amber-300'
-                    : 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300'
+                    ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/10 dark:text-amber-300'
+                    : 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-950/30 dark:text-emerald-300'
                 }`}
                 title="Suma del FTE de todos los puestos que ocupa en el Holding"
               >
@@ -2937,46 +2943,46 @@ function PersonTaskSummaryModal({
               </div>
             )}
             {person.supervisor && (
-              <p className="mt-2 text-[11px] font-semibold text-slate-500">
-                Supervisor: <span className="text-slate-300">{person.supervisor}</span>
+              <p className="mt-2 text-[11px] font-semibold text-slate-600 dark:text-slate-500">
+                Supervisor: <span className="text-slate-800 dark:text-slate-300">{person.supervisor}</span>
               </p>
             )}
           </div>
-          <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white">
+          <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           {summaries.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+            <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-600 dark:border-slate-800 dark:bg-transparent dark:text-slate-500">
               Esta persona todavía no participa en ninguna entidad del Holding.
             </p>
           ) : (
             summaries.map(({ entity, positions, assignment }) => {
               const meta = ENTITY_META[entity.type];
               return (
-                <section key={entity.id} className="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                <section key={entity.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/50">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                     {meta.label}
                   </span>
-                  <h3 className="mt-1 break-words font-display text-sm font-extrabold text-slate-100">{entity.name}</h3>
+                  <h3 className="mt-1 break-words font-display text-sm font-extrabold text-slate-900 dark:text-slate-100">{entity.name}</h3>
 
                   {positions.length > 0 && (
                     <div className="mt-2.5 space-y-2.5">
                       {positions.map((position) => (
-                        <div key={position.id} className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+                        <div key={position.id} className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900/60">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-xs font-bold text-slate-100">{position.title}</p>
-                            <span className="rounded-full border border-cyan-700/60 bg-cyan-950/50 px-2 py-0.5 text-[9px] font-black text-cyan-200">
+                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{position.title}</p>
+                            <span className="rounded-full border border-cyan-300 bg-cyan-600 px-2 py-0.5 text-[9px] font-black text-white dark:border-cyan-700/60 dark:bg-cyan-950/50 dark:text-cyan-200">
                               {formatFte(position.fte)} FTE
                             </span>
                           </div>
-                          {position.department && <p className="mt-0.5 text-[10px] font-medium text-slate-500">{position.department}</p>}
+                          {position.department && <p className="mt-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-500">{position.department}</p>}
 
                           <div className="mt-2 space-y-1">
                             {(position.tasks || []).length === 0 ? (
-                              <p className="text-[10.5px] text-slate-500">Sin funciones específicas registradas.</p>
+                              <p className="text-[10.5px] text-slate-600 dark:text-slate-500">Sin funciones específicas registradas.</p>
                             ) : (
                               position.tasks.map((task, taskIndex) => (
                                 <div key={`${position.id}-${taskIndex}`} className="flex items-start gap-1.5">
@@ -2985,18 +2991,18 @@ function PersonTaskSummaryModal({
                                     disabled={readOnly}
                                     onClick={() => onTogglePositionTask(entity.id, position.id, taskIndex)}
                                     className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded border transition-colors ${
-                                      isTaskDone(task) ? 'border-emerald-500 bg-emerald-500/70' : 'border-slate-600 bg-transparent hover:border-slate-500'
+                                      isTaskDone(task) ? 'border-emerald-500 bg-emerald-500/70' : 'border-slate-400 bg-transparent hover:border-slate-500 dark:border-slate-600'
                                     } disabled:cursor-not-allowed`}
                                     title={isTaskDone(task) ? 'Marcar como pendiente' : 'Marcar como completada'}
                                   />
-                                  <span className={`min-w-0 flex-1 break-words text-[11px] leading-snug ${isTaskDone(task) ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+                                  <span className={`min-w-0 flex-1 break-words text-[11px] leading-snug ${isTaskDone(task) ? 'text-slate-500 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                                     {taskLabel(task)}
                                   </span>
                                   {!readOnly && (
                                     <button
                                       type="button"
                                       onClick={() => onRemovePositionTask(entity.id, position.id, taskIndex)}
-                                      className="shrink-0 text-slate-600 transition-colors hover:text-red-300"
+                                      className="shrink-0 text-slate-500 transition-colors hover:text-red-600 dark:text-slate-600 dark:hover:text-red-300"
                                       title="Quitar función"
                                     >
                                       <X className="h-3 w-3" />
@@ -3014,10 +3020,10 @@ function PersonTaskSummaryModal({
                   )}
 
                   {assignment && (
-                    <div className={positions.length > 0 ? 'mt-2.5 border-t border-slate-800/70 pt-2.5' : 'mt-2.5'}>
-                      <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Función general en la entidad</p>
+                    <div className={positions.length > 0 ? 'mt-2.5 border-t border-slate-200 pt-2.5 dark:border-slate-800/70' : 'mt-2.5'}>
+                      <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-500">Función general en la entidad</p>
                       {readOnly ? (
-                        <p className="rounded-lg border border-slate-800 bg-slate-900/60 p-2.5 text-xs leading-relaxed text-slate-300">
+                        <p className="rounded-lg border border-slate-200 bg-white p-2.5 text-xs leading-relaxed text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                           {assignment.taskText || 'Sin función específica registrada.'}
                         </p>
                       ) : (
@@ -3026,7 +3032,7 @@ function PersonTaskSummaryModal({
                           onChange={(event) => onUpdateAssignmentTask(assignment.id, event.target.value)}
                           rows={2}
                           placeholder="Describe funciones, tareas o situación específica en esta entidad..."
-                          className="w-full resize-none rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-xs leading-relaxed text-slate-200 outline-none focus:border-indigo-500"
+                          className="w-full resize-none rounded-lg border border-slate-300 bg-white p-2.5 text-xs leading-relaxed text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                         />
                       )}
                     </div>
@@ -3445,59 +3451,59 @@ function CalendarModal({
     new Date(`${dateIso}T00:00:00`).toLocaleDateString('es-CL', { weekday: 'short', day: '2-digit', month: 'short' });
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="flex max-h-[88vh] w-full max-w-3xl flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl"
+        className="flex max-h-[88vh] w-full max-w-3xl flex-col rounded-2xl border border-slate-300 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-800 p-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 p-5 dark:border-slate-800">
           <div className="min-w-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
               <Calendar className="h-3 w-3" />
               Calendario de Compromisos
             </span>
-            <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-white">Cronograma de Vencimientos</h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-slate-900 dark:text-white">Cronograma de Vencimientos</h2>
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-500">
               Cierres de licitaciones, entregas de proyectos y tareas comprometidas, ordenados cronológicamente.
             </p>
           </div>
-          <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white">
+          <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex shrink-0 flex-wrap gap-2 border-b border-slate-800 p-4">
+        <div className="flex shrink-0 flex-wrap gap-2 border-b border-slate-200 p-4 dark:border-slate-800">
           <button
             type="button"
             onClick={onOpenNewLicitation}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-xs font-bold text-amber-100 transition-colors hover:bg-amber-500/25"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900 transition-colors hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100 dark:hover:bg-amber-500/25"
           >
             <Plus className="h-3.5 w-3.5" />
             Nueva Licitacion
           </button>
-          <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">
+          <label className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
             Persona
             <select
               value={personFilter}
               onChange={(event) => setPersonFilter(event.target.value)}
-              className="min-w-[160px] bg-transparent text-xs font-semibold text-slate-100 outline-none"
+              className="min-w-[160px] bg-transparent text-xs font-semibold text-slate-900 outline-none dark:text-slate-100"
             >
-              <option value="todas" className="bg-slate-950">Todas</option>
+              <option value="todas" className="bg-white dark:bg-slate-950">Todas</option>
               {people.map((person) => (
-                <option key={person.id} value={person.id} className="bg-slate-950">{person.name}</option>
+                <option key={person.id} value={person.id} className="bg-white dark:bg-slate-950">{person.name}</option>
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">
+          <label className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
             Entidad
             <select
               value={entityFilter}
               onChange={(event) => setEntityFilter(event.target.value)}
-              className="min-w-[160px] bg-transparent text-xs font-semibold text-slate-100 outline-none"
+              className="min-w-[160px] bg-transparent text-xs font-semibold text-slate-900 outline-none dark:text-slate-100"
             >
-              <option value="todas" className="bg-slate-950">Todas</option>
+              <option value="todas" className="bg-white dark:bg-slate-950">Todas</option>
               {entities.map((entity) => (
-                <option key={entity.id} value={entity.id} className="bg-slate-950">{entity.name}</option>
+                <option key={entity.id} value={entity.id} className="bg-white dark:bg-slate-950">{entity.name}</option>
               ))}
             </select>
           </label>
@@ -3505,13 +3511,13 @@ function CalendarModal({
 
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
           {groupedByMonth.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+            <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-600 dark:border-slate-800 dark:bg-transparent dark:text-slate-500">
               No hay fechas de vencimiento registradas para este filtro.
             </p>
           ) : (
             groupedByMonth.map(([monthKey, monthEvents]) => (
               <section key={monthKey}>
-                <h3 className="mb-2 text-xs font-extrabold uppercase tracking-wider text-slate-500">{formatMonthLabel(monthKey)}</h3>
+                <h3 className="mb-2 text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-500">{formatMonthLabel(monthKey)}</h3>
                 <div className="space-y-2">
                   {monthEvents.map((event) => {
                     const urgency = getDueUrgency(event.date, event.commitmentStatus);
@@ -3523,9 +3529,9 @@ function CalendarModal({
                       .filter((person): person is Person => Boolean(person));
 
                     return (
-                      <div key={event.id} className="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
+                      <div key={event.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          <span className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                             {formatEventDate(event.date)}
                           </span>
                           <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${URGENCY_TONE_STYLES[urgency.tone]}`}>
@@ -3535,11 +3541,11 @@ function CalendarModal({
                             {urgency.label}
                           </span>
                         </div>
-                        <p className="mt-2 break-words text-sm font-bold text-slate-100">{event.title}</p>
+                        <p className="mt-2 break-words text-sm font-bold text-slate-900 dark:text-slate-100">{event.title}</p>
                         {isLicitationEvent && (
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             {event.entity.code && (
-                              <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[9px] font-bold text-slate-300">
+                              <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                                 ID {event.entity.code}
                               </span>
                             )}
@@ -3549,7 +3555,7 @@ function CalendarModal({
                               </span>
                             )}
                             {leader && (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold text-indigo-200">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[9px] font-bold text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200">
                                 <User className="h-3 w-3" />
                                 Lider: {leader.name}
                               </span>
@@ -3558,35 +3564,35 @@ function CalendarModal({
                         )}
                         {isLicitationEvent && (
                           <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                            <label className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1 text-[10px] font-bold text-slate-400">
+                            <label className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                               Lider
                               <select
                                 value={event.leaderPersonId || ''}
                                 onChange={(changeEvent) => onUpdateLicitationLeader(event.entity.id, changeEvent.target.value)}
-                                className="mt-1 w-full bg-transparent text-xs font-semibold text-slate-100 outline-none"
+                                className="mt-1 w-full bg-transparent text-xs font-semibold text-slate-900 outline-none dark:text-slate-100"
                               >
-                                <option value="" className="bg-slate-950">Sin lider</option>
+                                <option value="" className="bg-white dark:bg-slate-950">Sin lider</option>
                                 {people.map((person) => (
-                                  <option key={person.id} value={person.id} className="bg-slate-950">{person.name}</option>
+                                  <option key={person.id} value={person.id} className="bg-white dark:bg-slate-950">{person.name}</option>
                                 ))}
                               </select>
                             </label>
-                            <label className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1 text-[10px] font-bold text-slate-400">
+                            <label className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                               Estado
                               <select
                                 value={event.workflowStatus || 'Cotizando'}
                                 onChange={(changeEvent) => onUpdateLicitationWorkflowStatus(event.entity.id, changeEvent.target.value as LicitationWorkflowStatus)}
-                                className="mt-1 w-full bg-transparent text-xs font-semibold text-slate-100 outline-none"
+                                className="mt-1 w-full bg-transparent text-xs font-semibold text-slate-900 outline-none dark:text-slate-100"
                               >
                                 {LICITATION_WORKFLOW_STATUS_OPTIONS.map((status) => (
-                                  <option key={status} value={status} className="bg-slate-950">{status}</option>
+                                  <option key={status} value={status} className="bg-white dark:bg-slate-950">{status}</option>
                                 ))}
                               </select>
                             </label>
                             <button
                               type="button"
                               onClick={() => onDismissLicitation(event.entity)}
-                              className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-500/40 bg-red-500/10 px-2 py-2 text-[10px] font-bold text-red-200 transition-colors hover:bg-red-500/20"
+                              className="inline-flex items-center justify-center gap-1 rounded-lg border border-rose-300 bg-rose-50 px-2 py-2 text-[10px] font-bold text-rose-800 transition-colors hover:bg-rose-100 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20"
                               title="Desestimar o borrar licitacion"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -3594,11 +3600,11 @@ function CalendarModal({
                             </button>
                           </div>
                         )}
-                        <p className="mt-0.5 text-[11px] text-slate-500">{meta.label} · {event.entity.name}</p>
+                        <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-500">{meta.label} · {event.entity.name}</p>
                         {relatedPeople.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             {relatedPeople.map((person) => (
-                              <span key={person.id} className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[9px] font-semibold text-slate-300">
+                              <span key={person.id} className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                                 {person.name}
                               </span>
                             ))}
@@ -3665,46 +3671,46 @@ function HistoryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl"
+        className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-300 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-800 p-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 p-5 dark:border-slate-800">
           <div className="min-w-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
               <History className="h-3 w-3" />
               Histórico de Procesos
             </span>
-            <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-white">Guardar y Restaurar Versiones</h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-slate-900 dark:text-white">Guardar y Restaurar Versiones</h2>
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-500">
               Guarda el estado completo del tablero como un punto en el tiempo — por ejemplo, tras una reunión — y vuelve a él cuando lo necesites.
             </p>
           </div>
-          <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white">
+          <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={submitSave} className="shrink-0 space-y-3 border-b border-slate-800 p-5">
-          <label className="text-xs font-bold text-slate-400">
+        <form onSubmit={submitSave} className="shrink-0 space-y-3 border-b border-slate-200 p-5 dark:border-slate-800">
+          <label className="text-xs font-bold text-slate-600 dark:text-slate-400">
             Nombre del proceso / versión
             <input
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder='Ej: "Acuerdos Reunión Delegación 11-Ago"'
-              className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
             />
           </label>
-          <label className="text-xs font-bold text-slate-400">
+          <label className="text-xs font-bold text-slate-600 dark:text-slate-400">
             Notas de compromiso
             <textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               rows={2}
               placeholder="Acuerdos, pendientes o contexto de esta versión..."
-              className="mt-1 w-full resize-none rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500"
+              className="mt-1 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
             />
           </label>
           <div className="flex justify-end">
@@ -3716,29 +3722,29 @@ function HistoryModal({
         </form>
 
         <div className="flex-1 space-y-2.5 overflow-y-auto p-5">
-          <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Versiones guardadas ({sortedSnapshots.length})</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-500">Versiones guardadas ({sortedSnapshots.length})</p>
           {sortedSnapshots.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+            <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-600 dark:border-slate-800 dark:bg-transparent dark:text-slate-500">
               Todavía no hay versiones guardadas.
             </p>
           ) : (
             sortedSnapshots.map((snapshot) => (
-              <div key={snapshot.id} className="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
+              <div key={snapshot.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="break-words text-sm font-bold text-slate-100">{snapshot.name}</p>
-                    <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                    <p className="break-words text-sm font-bold text-slate-900 dark:text-slate-100">{snapshot.name}</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-500">
                       {new Date(snapshot.createdAt).toLocaleString('es-CL', { dateStyle: 'medium', timeStyle: 'short' })}
                       {' · '}
                       {snapshot.state.entities.length} entidades · {snapshot.state.people.length} personas
                     </p>
-                    {snapshot.notes && <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">{snapshot.notes}</p>}
+                    {snapshot.notes && <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">{snapshot.notes}</p>}
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => onRestore(snapshot.id)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-[10px] font-bold text-slate-300 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-700 transition-colors hover:border-indigo-500/50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-indigo-300"
                       title="Restaurar esta versión"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
@@ -3747,7 +3753,7 @@ function HistoryModal({
                     <button
                       type="button"
                       onClick={() => onDownload(snapshot)}
-                      className="rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-400 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+                      className="rounded-lg border border-slate-300 bg-white p-1.5 text-slate-600 transition-colors hover:border-cyan-500/50 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-cyan-300"
                       title="Descargar esta versión como JSON"
                     >
                       <Download className="h-3.5 w-3.5" />
@@ -3755,7 +3761,7 @@ function HistoryModal({
                     <button
                       type="button"
                       onClick={() => onDelete(snapshot.id)}
-                      className="rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-400 transition-colors hover:border-red-400/50 hover:text-red-300"
+                      className="rounded-lg border border-slate-300 bg-white p-1.5 text-slate-600 transition-colors hover:border-red-400/50 hover:text-red-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-red-300"
                       title="Eliminar esta versión"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -3983,9 +3989,12 @@ export default function App() {
     [board.people, expandedPersonIds]
   );
 
-  const connectionColor = theme === 'light' ? '#0369a1' : '#38bdf8';
+  // Modo Claro: trazo azul-marino/slate profundo con opacidad alta para que las
+  // flechas de jerarquía destaquen con nitidez sobre fondos claros.
+  const connectionColor = theme === 'light' ? '#334155' : '#38bdf8';
   const connectionActiveColor = theme === 'light' ? '#0f172a' : '#67e8f9';
-  const connectionTextColor = theme === 'light' ? '#0c4a6e' : '#bae6fd';
+  const connectionTextColor = theme === 'light' ? '#1e293b' : '#bae6fd';
+  const connectionOpacity = theme === 'light' ? 0.85 : 1;
 
   const showToast = (message: string, type: ToastMessage['type'] = 'success') => {
     const id = Date.now();
@@ -5233,7 +5242,7 @@ export default function App() {
   }, [manualAssignableEntities, manualAssignEntityId, selectedPerson]);
 
   return (
-    <div className={`theme-${theme} min-h-screen overflow-hidden text-slate-100 transition-colors duration-300`}>
+    <div className={`theme-${theme} min-h-screen overflow-hidden text-slate-900 transition-colors duration-300 dark:text-slate-100`}>
       {toasts.length > 0 && (
         <div className="fixed right-4 top-4 z-[90] flex w-[min(calc(100vw-2rem),380px)] flex-col gap-2">
           {toasts.map((toast) => (
@@ -5254,7 +5263,7 @@ export default function App() {
       )}
 
       <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/85 dark:backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-4 py-4 lg:px-6">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
             <div className="flex items-center gap-3">
@@ -5263,15 +5272,15 @@ export default function App() {
               </div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="font-display text-xl font-extrabold tracking-tight text-white">Tablero Horizontal de Equipos</h1>
+                  <h1 className="font-display text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Tablero Horizontal de Equipos</h1>
                   {isPresentationMode && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-400/40 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-300">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-300 bg-indigo-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-800 dark:border-indigo-400/40 dark:bg-indigo-500/10 dark:text-indigo-300">
                       <Presentation className="h-3 w-3" />
                       Modo Presentación Activo
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-slate-400">Empresas, proyectos, licitaciones y tareas en una sola vista plana y conectable.</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Empresas, proyectos, licitaciones y tareas en una sola vista plana y conectable.</p>
               </div>
             </div>
 
@@ -5311,7 +5320,7 @@ export default function App() {
                   className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
                     connectionMode
                       ? 'border-amber-400 bg-amber-400 text-slate-950'
-                      : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
+                      : 'border-slate-300 bg-white text-slate-700 shadow-sm hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:border-slate-700'
                   }`}
                 >
                   <Link2 className="h-3.5 w-3.5" />
@@ -5338,7 +5347,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsMindMapOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:border-slate-700"
                 title="Abrir vista alternativa de mapa mental"
               >
                 <Network className="h-3.5 w-3.5" />
@@ -5347,7 +5356,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsFunctionalOrgChartOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:border-slate-700"
                 title="Ver organigrama por áreas funcionales y distribución % FTE en el Holding"
               >
                 <Workflow className="h-3.5 w-3.5" />
@@ -5356,7 +5365,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setCompactMode((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:border-slate-700"
               >
                 <Layers3 className="h-3.5 w-3.5" />
                 {compactMode ? 'Expandida' : 'Compacta'}
@@ -5390,7 +5399,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsCalendarModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:border-slate-700"
                 title="Ver calendario de vencimientos y compromisos"
               >
                 <Calendar className="h-3.5 w-3.5" />
@@ -5399,7 +5408,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsHistoryModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:border-slate-700"
                 title="Guardar o restaurar versiones del tablero (histórico de procesos)"
               >
                 <History className="h-3.5 w-3.5" />
@@ -5408,7 +5417,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleExportBoard}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:border-slate-700"
                 title="Descargar el tablero completo como archivo JSON"
               >
                 <Download className="h-3.5 w-3.5" />
@@ -5417,7 +5426,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleImportClick}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:border-slate-700"
                 title="Cargar un archivo JSON exportado previamente"
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -5426,7 +5435,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:border-slate-700"
                 title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
               >
                 {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
@@ -5450,65 +5459,65 @@ export default function App() {
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Buscar por nombre, rol, categoría, nota o contacto..."
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-10 pr-9 text-xs text-slate-200 outline-none transition focus:border-indigo-500"
+                  className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-9 text-xs text-slate-900 outline-none transition focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
                 <Filter className="h-3.5 w-3.5 text-slate-500" />
                 <select
                   value={roleFilter}
                   onChange={(event) => setRoleFilter(event.target.value as 'Todos' | RoleType)}
-                  className="bg-transparent text-xs font-semibold text-slate-200 outline-none"
+                  className="bg-transparent text-xs font-semibold text-slate-900 outline-none dark:text-slate-200"
                 >
-                  <option value="Todos" className="bg-slate-950">Todos los roles</option>
+                  <option value="Todos" className="bg-white dark:bg-slate-950">Todos los roles</option>
                   {ROLE_OPTIONS.map((role) => (
-                    <option key={role} value={role} className="bg-slate-950">{role}</option>
+                    <option key={role} value={role} className="bg-white dark:bg-slate-950">{role}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
                 <Building2 className="h-3.5 w-3.5 text-slate-500" />
                 <select
                   value={entityTypeFilter}
                   onChange={(event) => setEntityTypeFilter(event.target.value as 'todos' | EntityType)}
-                  className="bg-transparent text-xs font-semibold text-slate-200 outline-none"
+                  className="bg-transparent text-xs font-semibold text-slate-900 outline-none dark:text-slate-200"
                 >
-                  <option value="todos" className="bg-slate-950">Todas las entidades</option>
-                  <option value="empresa" className="bg-slate-950">Empresas</option>
-                  <option value="proyecto" className="bg-slate-950">Proyectos</option>
-                  <option value="licitacion" className="bg-slate-950">Licitaciones</option>
-                  <option value="tarea" className="bg-slate-950">Tareas</option>
+                  <option value="todos" className="bg-white dark:bg-slate-950">Todas las entidades</option>
+                  <option value="empresa" className="bg-white dark:bg-slate-950">Empresas</option>
+                  <option value="proyecto" className="bg-white dark:bg-slate-950">Proyectos</option>
+                  <option value="licitacion" className="bg-white dark:bg-slate-950">Licitaciones</option>
+                  <option value="tarea" className="bg-white dark:bg-slate-950">Tareas</option>
                 </select>
               </div>
             </div>
 
             <div className="grid grid-cols-4 gap-2 text-xs">
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2">
-                <span className="block text-[10px] font-bold text-slate-500">PERSONAS</span>
-                <strong>{stats.people}</strong>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
+                <span className="block text-[10px] font-bold text-slate-600 dark:text-slate-500">PERSONAS</span>
+                <strong className="text-slate-900 dark:text-slate-100">{stats.people}</strong>
               </div>
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2">
-                <span className="block text-[10px] font-bold text-slate-500">COLUMNAS</span>
-                <strong>{stats.entities}</strong>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
+                <span className="block text-[10px] font-bold text-slate-600 dark:text-slate-500">COLUMNAS</span>
+                <strong className="text-slate-900 dark:text-slate-100">{stats.entities}</strong>
               </div>
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2">
-                <span className="block text-[10px] font-bold text-slate-500">ASIGNACIONES</span>
-                <strong>{stats.assignments}</strong>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
+                <span className="block text-[10px] font-bold text-slate-600 dark:text-slate-500">ASIGNACIONES</span>
+                <strong className="text-slate-900 dark:text-slate-100">{stats.assignments}</strong>
               </div>
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2">
-                <span className="block text-[10px] font-bold text-slate-500">CONEXIONES</span>
-                <strong>{stats.connections}</strong>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
+                <span className="block text-[10px] font-bold text-slate-600 dark:text-slate-500">CONEXIONES</span>
+                <strong className="text-slate-900 dark:text-slate-100">{stats.connections}</strong>
               </div>
             </div>
           </div>
@@ -5516,12 +5525,12 @@ export default function App() {
       </header>
 
       <main className={fitToScreen ? 'w-full px-3 py-5' : 'mx-auto max-w-[1800px] px-4 py-5 lg:px-6'}>
-        <div className="mb-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-4 text-xs leading-relaxed text-slate-400">
-          <strong className="text-slate-200">Estructura jerárquica:</strong> la Cúpula Directiva queda fija arriba; debajo, cada nivel (Empresas → Proyectos → Licitaciones → Tareas) tiene su propia fila a todo el ancho. Abre "Banco de Personas" en el header para buscar, editar o asignar directamente a cualquier entidad, reordena columnas dentro de su fila y colapsa niveles con la flecha para enfocar la vista.
+        <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 text-xs leading-relaxed text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900/45 dark:text-slate-400 dark:shadow-none">
+          <strong className="text-slate-900 dark:text-slate-200">Estructura jerárquica:</strong> la Cúpula Directiva queda fija arriba; debajo, cada nivel (Empresas → Proyectos → Licitaciones → Tareas) tiene su propia fila a todo el ancho. Abre "Banco de Personas" en el header para buscar, editar o asignar directamente a cualquier entidad, reordena columnas dentro de su fila y colapsa niveles con la flecha para enfocar la vista.
         </div>
 
         {connectionMode && (
-          <div className="mb-4 rounded-2xl border border-cyan-400/50 bg-cyan-950/30 p-3 text-xs font-semibold text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.16)]">
+          <div className="mb-4 rounded-2xl border border-cyan-300 bg-cyan-50 p-3 text-xs font-semibold text-cyan-900 shadow-sm dark:border-cyan-400/50 dark:bg-cyan-950/30 dark:text-cyan-100 dark:shadow-[0_0_18px_rgba(34,211,238,0.16)]">
             {selectedConnectionPerson
               ? `Selecciona a quien reporta ${selectedConnectionPerson.name}. Haz clic en la misma persona para cancelar.`
               : 'Modo Conexion activo: haz clic en una tarjeta para elegir el origen de la relacion.'}
@@ -5577,6 +5586,7 @@ export default function App() {
                       fill="none"
                       markerEnd={isActive ? 'url(#arrow-head-active)' : 'url(#arrow-head)'}
                       stroke={isActive ? connectionActiveColor : connectionColor}
+                      strokeOpacity={isActive ? 1 : connectionOpacity}
                       strokeDasharray={isActive ? '0' : '7 7'}
                       strokeLinecap="round"
                       strokeWidth={isActive ? '4' : '2.5'}
@@ -5701,8 +5711,8 @@ export default function App() {
 
           <DragOverlay dropAnimation={null}>
             {activePerson ? (
-              <div className="w-[280px] rotate-2 rounded-xl border border-indigo-400 bg-slate-900 p-3 shadow-2xl ring-2 ring-indigo-400/30">
-                <h4 className="font-display text-sm font-bold text-white">{activePerson.name}</h4>
+              <div className="w-[280px] rotate-2 rounded-xl border border-indigo-400 bg-white p-3 shadow-2xl ring-2 ring-indigo-400/30 dark:bg-slate-900">
+                <h4 className="font-display text-sm font-bold text-slate-900 dark:text-white">{activePerson.name}</h4>
                 <div className="mt-2">
                   <RoleBadge role={activePerson.role} />
                 </div>
@@ -5799,22 +5809,22 @@ export default function App() {
       />
 
       {selectedPerson && (
-        <aside className="fixed inset-y-0 right-0 z-[80] flex w-full max-w-xl flex-col border-l border-slate-800 bg-slate-950/95 shadow-2xl backdrop-blur-xl">
-          <div className="border-b border-slate-800 p-5">
+        <aside className="fixed inset-y-0 right-0 z-[80] flex w-full max-w-xl flex-col border-l border-slate-300 bg-white/98 shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95">
+          <div className="border-b border-slate-200 p-5 dark:border-slate-800">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                   <User className="h-3 w-3" />
                   Detalle de persona
                 </span>
-                <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-white">{selectedPerson.name}</h2>
+                <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-slate-900 dark:text-white">{selectedPerson.name}</h2>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <RoleBadge role={selectedPerson.role} />
-                  <span className="rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-slate-400">{selectedPerson.category}</span>
+                  <span className="rounded-md border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">{selectedPerson.category}</span>
                 </div>
                 <PersonBadges person={selectedPerson} />
               </div>
-              <button type="button" onClick={() => setSelectedPersonId(null)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-900 hover:text-white">
+              <button type="button" onClick={() => setSelectedPersonId(null)} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -5822,7 +5832,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => openTaskSummary(selectedPerson.id)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-300 transition-colors hover:bg-cyan-950/50"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-300 bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-800 transition-colors hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-950/30 dark:text-cyan-300 dark:hover:bg-cyan-950/50"
                 title="Ver el resumen consolidado de puestos y funciones de esta persona en todo el Holding"
               >
                 <ClipboardList className="h-3.5 w-3.5" />
@@ -5842,7 +5852,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => handleDeletePerson(selectedPerson.id)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-950/30 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-950/50"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800 hover:bg-rose-100 dark:border-red-500/30 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Eliminar definitivamente
@@ -5854,16 +5864,16 @@ export default function App() {
           <div className="flex-1 space-y-5 overflow-y-auto p-5">
             {!isPresentationMode && (
               <section>
-                <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">Copiar a otra entidad</h3>
-                <div className="rounded-xl border border-slate-800 bg-slate-900/55 p-3">
+                <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-500">Copiar a otra entidad</h3>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/55">
                   {manualAssignableEntities.length === 0 ? (
-                    <p className="text-xs text-slate-500">Esta persona ya participa en todas las entidades disponibles.</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-500">Esta persona ya participa en todas las entidades disponibles.</p>
                   ) : (
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <select
                         value={manualAssignEntityId}
                         onChange={(event) => setManualAssignEntityId(event.target.value)}
-                        className="min-w-0 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-200 outline-none focus:border-indigo-500"
+                        className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                       >
                         {manualAssignableEntities.map((entity) => (
                           <option key={entity.id} value={entity.id}>
@@ -5888,20 +5898,20 @@ export default function App() {
               </section>
             )}
             <section>
-              <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">Participación y funciones por entidad</h3>
+              <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-500">Participación y funciones por entidad</h3>
               <div className="space-y-3">
                 {selectedAssignments.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-slate-800 p-4 text-sm text-slate-500">Esta persona todavía no participa en ninguna columna.</p>
+                  <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-transparent dark:text-slate-500">Esta persona todavía no participa en ninguna columna.</p>
                 ) : (
                   selectedAssignments.map((assignment) => (
-                    <div key={assignment.id} className="rounded-xl border border-slate-800 bg-slate-900/55 p-3">
+                    <div key={assignment.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/55">
                       <div className="mb-2 flex items-center justify-between gap-3">
-                        <strong className="text-sm text-slate-200">{getEntityName(assignment.entityId)}</strong>
+                        <strong className="text-sm text-slate-900 dark:text-slate-200">{getEntityName(assignment.entityId)}</strong>
                         {!isPresentationMode && (
                           <button
                             type="button"
                             onClick={() => handleRemoveAssignment(assignment.id)}
-                            className="rounded-lg p-1.5 text-slate-500 hover:bg-red-950/40 hover:text-red-300"
+                            className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-red-950/40 dark:hover:text-red-300"
                             title="Quitar asignación"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -5909,7 +5919,7 @@ export default function App() {
                         )}
                       </div>
                       {isPresentationMode ? (
-                        <p className="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs leading-relaxed text-slate-300">
+                        <p className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs leading-relaxed text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
                           {assignment.taskText || 'Sin función específica registrada.'}
                         </p>
                       ) : (
@@ -5918,7 +5928,7 @@ export default function App() {
                           onChange={(event) => handleUpdateAssignmentTask(assignment.id, event.target.value)}
                           rows={3}
                           placeholder="Describe funciones, tareas o situación específica en esta entidad..."
-                          className="w-full resize-none rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs leading-relaxed text-slate-200 outline-none focus:border-indigo-500"
+                          className="w-full resize-none rounded-xl border border-slate-300 bg-white p-3 text-xs leading-relaxed text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                         />
                       )}
                     </div>
@@ -5928,23 +5938,23 @@ export default function App() {
             </section>
 
             <section>
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Conexiones activas</h3>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-500">Conexiones activas</h3>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-500">
                 En Modo Conexion tambien puedes hacer clic sobre una linea del tablero para eliminarla.
               </p>
             </section>
 
             <section>
-              <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">Reporta a</h3>
+              <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-500">Reporta a</h3>
               <div className="space-y-2">
                 {outgoingConnections.length === 0 ? (
-                  <p className="text-xs text-slate-500">Sin conexiones de reporte salientes.</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-500">Sin conexiones de reporte salientes.</p>
                 ) : (
                   outgoingConnections.map((connection) => (
-                    <div key={connection.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/55 p-3 text-xs">
-                      <span><strong className="text-slate-200">{getPersonName(connection.targetPersonId)}</strong> · {connection.label}</span>
+                    <div key={connection.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/55">
+                      <span><strong className="text-slate-900 dark:text-slate-200">{getPersonName(connection.targetPersonId)}</strong> · {connection.label}</span>
                       {!isPresentationMode && (
-                        <button type="button" onClick={() => handleRemoveConnection(connection.id)} className="text-slate-500 hover:text-red-300">
+                        <button type="button" onClick={() => handleRemoveConnection(connection.id)} className="text-slate-500 hover:text-rose-700 dark:hover:text-red-300">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
@@ -5955,16 +5965,16 @@ export default function App() {
             </section>
 
             <section>
-              <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">Le reportan</h3>
+              <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-500">Le reportan</h3>
               <div className="space-y-2">
                 {incomingConnections.length === 0 ? (
-                  <p className="text-xs text-slate-500">Sin conexiones entrantes.</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-500">Sin conexiones entrantes.</p>
                 ) : (
                   incomingConnections.map((connection) => (
-                    <div key={connection.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/55 p-3 text-xs">
-                      <span><strong className="text-slate-200">{getPersonName(connection.sourcePersonId)}</strong> · {connection.label}</span>
+                    <div key={connection.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/55">
+                      <span><strong className="text-slate-900 dark:text-slate-200">{getPersonName(connection.sourcePersonId)}</strong> · {connection.label}</span>
                       {!isPresentationMode && (
-                        <button type="button" onClick={() => handleRemoveConnection(connection.id)} className="text-slate-500 hover:text-red-300">
+                        <button type="button" onClick={() => handleRemoveConnection(connection.id)} className="text-slate-500 hover:text-rose-700 dark:hover:text-red-300">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
@@ -5981,7 +5991,7 @@ export default function App() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <form onSubmit={handleSavePerson} className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
             <div className="mb-5 flex shrink-0 items-center justify-between">
-              <h2 className="font-display text-lg font-extrabold text-white">{editingPersonId ? 'Editar persona' : 'Agregar persona'}</h2>
+              <h2 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">{editingPersonId ? 'Editar persona' : 'Agregar persona'}</h2>
               <button type="button" onClick={() => setIsPersonModalOpen(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white">
                 <X className="h-5 w-5" />
               </button>
@@ -6182,7 +6192,7 @@ export default function App() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <form onSubmit={handleSaveEntity} className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-display text-lg font-extrabold text-white">{editingEntityId ? 'Editar entidad horizontal' : 'Agregar entidad horizontal'}</h2>
+              <h2 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">{editingEntityId ? 'Editar entidad horizontal' : 'Agregar entidad horizontal'}</h2>
               <button
                 type="button"
                 onClick={() => {
@@ -6276,7 +6286,7 @@ export default function App() {
                   <Gavel className="h-3 w-3" />
                   Alta rapida
                 </span>
-                <h2 className="mt-2 font-display text-lg font-extrabold text-white">Nueva Licitacion</h2>
+                <h2 className="mt-2 font-display text-lg font-extrabold text-slate-900 dark:text-white">Nueva Licitacion</h2>
               </div>
               <button
                 type="button"
@@ -6396,7 +6406,7 @@ export default function App() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <form onSubmit={handleSaveHolding} className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-display text-lg font-extrabold text-white">Editar miembro de la cúpula directiva</h2>
+              <h2 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">Editar miembro de la cúpula directiva</h2>
               <button
                 type="button"
                 onClick={() => {
@@ -6447,7 +6457,7 @@ export default function App() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <form onSubmit={handleSavePosition} className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
             <div className="mb-5 flex shrink-0 items-center justify-between">
-              <h2 className="font-display text-lg font-extrabold text-white">{editingPositionId ? 'Editar puesto' : 'Crear puesto'}</h2>
+              <h2 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">{editingPositionId ? 'Editar puesto' : 'Crear puesto'}</h2>
               <button
                 type="button"
                 onClick={() => {

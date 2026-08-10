@@ -58,51 +58,23 @@ body[data-theme='dark'] {
   filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.25));
 }
 
-/* Light theme overrides for the existing dark Tailwind surface classes. */
+/* Light theme base — a fallback background/text color for the root wrapper.
+   Everything else is handled per-component with explicit Tailwind `dark:`
+   pairs (bound to the `.dark` class above), NOT blunt attribute-substring
+   overrides: `[class*="bg-slate-900"]` etc. used to force-lighten ANY element
+   whose class string merely *contained* that substring — including inside a
+   `dark:bg-slate-900` token, which stomped the light-mode color a component
+   had actually asked for (e.g. white text left on a force-whitened chip).
+   Kept only the handful of rules that don't have that collision risk. */
 .theme-light {
   background: #f1f5f9;
   color: #0f172a;
 }
 
-.theme-light header.sticky,
-.theme-light aside,
-.theme-light form {
-  background: rgba(255, 255, 255, 0.94) !important;
-  border-color: #cbd5e1 !important;
-  color: #0f172a;
-}
-
-.theme-light [class*="bg-slate-950"],
-.theme-light [class*="bg-slate-900"],
-.theme-light [class*="bg-slate-800"] {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-}
-
-.theme-light [class*="bg-gradient-to-r"] [class*="bg-slate-950"],
-.theme-light [class*="bg-gradient-to-r"] [class*="bg-slate-900"] {
-  background-color: rgba(15, 23, 42, 0.42) !important;
-}
-
-.theme-light [class*="border-slate-800"],
-.theme-light [class*="border-slate-700"] {
-  border-color: #cbd5e1 !important;
-}
-
-.theme-light [class*="text-slate-100"],
-.theme-light [class*="text-slate-200"],
-.theme-light [class*="text-slate-300"],
 .theme-light > header h1,
 .theme-light aside h2,
 .theme-light form h2 {
   color: #0f172a !important;
-}
-
-.theme-light [class*="text-slate-400"] {
-  color: #475569 !important;
-}
-
-.theme-light [class*="text-slate-500"] {
-  color: #64748b !important;
 }
 
 .theme-light input,
@@ -118,31 +90,36 @@ body[data-theme='dark'] {
   color: #94a3b8 !important;
 }
 
-.theme-light mark {
-  background: rgba(251, 191, 36, 0.35);
-  color: #713f12;
+/* Safety net for surfaces not yet retrofitted with an explicit `dark:` pair
+   (secondary modals, form fields, small chips). Exact class selectors only —
+   never `[class*=…]` — so a bare `bg-slate-900` is forced light while a
+   `dark:bg-slate-900` token (a different literal class) is left alone.
+   Deliberately excludes modal backdrop scrims (bg-slate-950/60, /80): those
+   stay a dark dimming overlay in both themes by design. */
+.theme-light .bg-slate-950,
+.theme-light .bg-slate-900,
+.theme-light .bg-slate-900\/25,
+.theme-light .bg-slate-800 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
 }
 
-.theme-light [data-person-id] {
-  background: #ffffff !important;
+.theme-light .border-slate-800,
+.theme-light .border-slate-800\/70,
+.theme-light .border-slate-700 {
   border-color: #cbd5e1 !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
-.theme-light [data-person-id]:hover {
-  border-color: #94a3b8 !important;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+.theme-light .text-slate-200,
+.theme-light .text-slate-300 {
+  color: #0f172a !important;
 }
 
-.theme-light .holding-column {
-  background: rgba(255, 255, 255, 0.94) !important;
-  border-color: rgba(245, 158, 11, 0.68) !important;
+.theme-light .text-slate-400 {
+  color: #475569 !important;
 }
 
-.theme-light .holding-card {
-  background: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+.theme-light .text-slate-500 {
+  color: #64748b !important;
 }
 
 .theme-light .text-emerald-300 { color: #047857 !important; }
