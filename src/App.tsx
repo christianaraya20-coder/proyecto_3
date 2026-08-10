@@ -1077,11 +1077,13 @@ function PositionCard({
   const [pickedPersonId, setPickedPersonId] = useState('');
   const [pickedFte, setPickedFte] = useState<number>(1);
   const style = transform ? { transform: CSS.Transform.toString(transform), transition } : { transition };
+  const assignedPersonId = assignedPerson?.id;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
+      data-person-id={assignedPersonId}
       className={`rounded-xl border p-2.5 transition-all ${
         isVacant
           ? `border-dashed ${isOver ? 'border-amber-300 bg-amber-950/25' : 'border-amber-500/60 bg-amber-950/10'}`
@@ -1089,28 +1091,33 @@ function PositionCard({
       } ${isDragging ? 'opacity-40' : 'opacity-100'}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h5 className="truncate text-xs font-display font-bold leading-tight text-slate-100">{position.title}</h5>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <h5 className="min-w-0 truncate font-display text-xs font-bold leading-tight text-slate-100">{position.title}</h5>
+            {!isVacant && (
+              <span className="shrink-0 rounded-full border border-cyan-700/60 bg-cyan-950/50 px-2 py-0.5 text-[9px] font-black text-cyan-200">
+                {formatFte(position.fte)} FTE
+              </span>
+            )}
+          </div>
           {position.department && <p className="mt-0.5 truncate text-[10px] font-medium text-slate-500">{position.department}</p>}
+          {assignedPerson && (
+            <div className="mt-1.5 flex min-w-0 items-center gap-2">
+              <p className="min-w-0 truncate text-xs font-bold text-slate-100">{assignedPerson.name}</p>
+              <RoleBadge role={assignedPerson.role} />
+            </div>
+          )}
         </div>
         {isVacant ? (
           <span className="shrink-0 rounded-full border border-amber-400/60 bg-amber-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-300">
             Vacante
           </span>
-        ) : (
-          <span className="shrink-0 rounded-full border border-cyan-700/60 bg-cyan-950/50 px-2 py-0.5 text-[9px] font-black text-cyan-200">
-            {formatFte(position.fte)} FTE
-          </span>
-        )}
+        ) : null}
       </div>
 
       {assignedPerson ? (
-        <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2">
-          <div className="min-w-0">
-            <p className="truncate text-xs font-bold text-slate-100">{assignedPerson.name}</p>
-            <div className="mt-1"><RoleBadge role={assignedPerson.role} /></div>
-          </div>
-          {!readOnly && (
+        !readOnly && (
+          <div className="mt-2 flex justify-end">
             <button
               type="button"
               onClick={() => onUnassign(entityId, position.id)}
@@ -1119,8 +1126,8 @@ function PositionCard({
             >
               <UserMinus className="h-3.5 w-3.5" />
             </button>
-          )}
-        </div>
+          </div>
+        )
       ) : (
         !readOnly && (
           <div className="mt-2 flex flex-col gap-1.5">
@@ -1273,6 +1280,16 @@ function EntityColumn({
   onToggleBadges: (personId: string) => void;
 }) {
   const positions = entity.positions || [];
+  const positionedPersonIds = new Set(
+    positions
+      .map((position) => position.assignedPersonId)
+      .filter((personId): personId is string => Boolean(personId))
+  );
+  const quickAssignments = assignments.filter((assignment) => !positionedPersonIds.has(assignment.personId));
+  const participantCount = new Set([
+    ...assignments.map((assignment) => assignment.personId),
+    ...Array.from(positionedPersonIds),
+  ]).size;
   const { setNodeRef, isOver } = useDroppable({ id: `entity:${entity.id}` });
   const {
     attributes: columnAttributes,
@@ -1289,9 +1306,9 @@ function EntityColumn({
   const Icon = meta.icon;
   const columnStyle = columnTransform ? { transform: CSS.Transform.toString(columnTransform) } : undefined;
   const moveAssignment = (assignmentId: string, direction: 'up' | 'down') => {
-    const currentIndex = assignments.findIndex((assignment) => assignment.id === assignmentId);
+    const currentIndex = quickAssignments.findIndex((assignment) => assignment.id === assignmentId);
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    const targetAssignment = assignments[targetIndex];
+    const targetAssignment = quickAssignments[targetIndex];
     if (currentIndex < 0 || !targetAssignment) return;
     onReorderAssignment(entity.id, assignmentId, targetAssignment.id);
   };
@@ -1327,7 +1344,7 @@ function EntityColumn({
             {!fitMode && <p className="mt-1 line-clamp-2 min-h-[32px] text-xs leading-relaxed text-white/80">{entity.description}</p>}
           </div>
           <div className="flex flex-col items-end gap-2">
-            <span className={`rounded-full border border-white/20 bg-slate-950/35 font-bold text-white ${fitMode ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'}`}>{assignments.length}</span>
+            <span className={`rounded-full border border-white/20 bg-slate-950/35 font-bold text-white ${fitMode ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'}`}>{participantCount}</span>
             {!readOnly && (
               <div className="flex items-center gap-1.5">
                 <button
@@ -1423,19 +1440,19 @@ function EntityColumn({
         </div>
 
         <div className="border-t border-slate-800/70 pt-2">
-          <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Asignaciones rápidas ({assignments.length})</span>
+          <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Participantes sin puesto ({quickAssignments.length})</span>
         </div>
 
-        {assignments.length === 0 ? (
+        {quickAssignments.length === 0 ? (
           <div className="flex min-h-[100px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-800 p-6 text-center text-slate-500">
             <Users className="mb-2 h-8 w-8 opacity-25" />
-            <p className="text-xs font-semibold">Arrastra personas aquí</p>
-            <p className="mt-1 text-[10px] leading-relaxed">Se copian a esta columna sin salir de su origen.</p>
+            <p className="text-xs font-semibold">{participantCount === 0 ? 'Arrastra personas aquí' : 'Participantes integrados en puestos'}</p>
+            <p className="mt-1 text-[10px] leading-relaxed">{participantCount === 0 ? 'Se copian a esta columna sin salir de su origen.' : 'Las personas con puesto se muestran una sola vez arriba.'}</p>
           </div>
         ) : (
-          <SortableContext items={assignments.map((assignment) => `assignment:${assignment.id}`)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={quickAssignments.map((assignment) => `assignment:${assignment.id}`)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
-              {assignments.map((assignment, assignmentIndex) => {
+              {quickAssignments.map((assignment, assignmentIndex) => {
                 const person = people.find((candidate) => candidate.id === assignment.personId);
                 if (!person) return null;
 
@@ -1452,7 +1469,7 @@ function EntityColumn({
                     connectionMode={connectionMode}
                     readOnly={readOnly}
                     canMoveUp={assignmentIndex > 0}
-                    canMoveDown={assignmentIndex < assignments.length - 1}
+                    canMoveDown={assignmentIndex < quickAssignments.length - 1}
                     badgesExpanded={expandedPersonIds.has(person.id)}
                     onOpen={onOpenPerson}
                     onConnect={onConnect}
