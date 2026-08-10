@@ -19,13 +19,17 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
+  AlertTriangle,
   Building2,
   BriefcaseBusiness,
+  Calendar,
+  CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
   ClipboardList,
+  Clock,
   Crown,
   Download,
   Edit2,
@@ -33,6 +37,7 @@ import {
   Gavel,
   GripHorizontal,
   GripVertical,
+  History,
   Layers3,
   Link2,
   Maximize2,
@@ -41,6 +46,8 @@ import {
   Network,
   Plus,
   Presentation,
+  RotateCcw,
+  Save,
   Search,
   Sun,
   Tags,
@@ -69,6 +76,7 @@ type RoleType =
 
 type EntityType = 'empresa' | 'proyecto' | 'licitacion' | 'tarea';
 type ThemeMode = 'dark' | 'light';
+type CommitmentStatus = 'Pendiente' | 'En Progreso' | 'Completado' | 'Riesgo';
 
 type TagColorKey = 'slate' | 'red' | 'orange' | 'amber' | 'emerald' | 'cyan' | 'blue' | 'violet' | 'pink';
 
@@ -103,6 +111,12 @@ interface Position {
   // Specific functions/tasks assigned to whoever occupies this seat in this
   // entity. A task is "done" when it starts with TASK_DONE_PREFIX.
   tasks: string[];
+  // Calendar/commitment tracking for this seat's deliverable, independent of the
+  // entity-level dates below (e.g. a position can have its own delivery date
+  // inside a longer-running project).
+  startDate?: string; // YYYY-MM-DD
+  dueDate?: string; // YYYY-MM-DD
+  commitmentStatus?: CommitmentStatus;
 }
 
 interface BoardEntity {
@@ -116,6 +130,13 @@ interface BoardEntity {
   closeDate?: string;
   status?: string;
   positions?: Position[];
+  // Calendar/commitment tracking — startDate/dueDate feed the Calendario modal,
+  // commitmentStatus is the coarse enum shown as a badge (distinct from the
+  // free-text `status` field above, which already holds licitación-specific
+  // labels like "Retiro DIVAE").
+  startDate?: string; // YYYY-MM-DD
+  dueDate?: string; // YYYY-MM-DD
+  commitmentStatus?: CommitmentStatus;
 }
 
 interface Assignment {
@@ -166,9 +187,20 @@ interface ConnectionLine {
   label: string;
 }
 
+// A saved point-in-time copy of the full board — "Histórico de Procesos". Stored
+// separately from the live board so restoring one is a swap, not a merge.
+interface BoardSnapshot {
+  id: string;
+  name: string;
+  notes: string;
+  createdAt: string; // ISO datetime
+  state: BoardState;
+}
+
 const STORAGE_KEY = 'horizontal-board-state-v1';
 const LEGACY_STORAGE_KEY = 'holding-organigrama-employees-v1';
 const THEME_STORAGE_KEY = 'theme';
+const SNAPSHOTS_STORAGE_KEY = 'horizontal-board-snapshots-v1';
 
 const ENTITY_META: Record<EntityType, { label: string; icon: React.ElementType; className: string }> = {
   empresa: {
@@ -268,6 +300,75 @@ function toggleTaskDoneMarker(task: string) {
 
 const SUGGESTED_TAGS = ['RRHH', 'Licitaciones', 'ITO', 'Dirección', 'Legal', 'Finanzas', 'Tecnología', 'Logística'];
 
+const COMMITMENT_STATUS_OPTIONS: CommitmentStatus[] = ['Pendiente', 'En Progreso', 'Completado', 'Riesgo'];
+
+function isCommitmentStatus(value: unknown): value is CommitmentStatus {
+  return typeof value === 'string' && (COMMITMENT_STATUS_OPTIONS as string[]).includes(value);
+}
+
+// Parses a "DD/MM/YYYY" string (the format used across the July licitación
+// planillas) into an ISO "YYYY-MM-DD" date. Several closeDate values are
+// placeholders like "Contrato" or "Esperando" rather than real dates — those
+// return null and simply don't get a calendar entry.
+function parseDdMmYyyyToIso(value: string): string | undefined {
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value.trim());
+  if (!match) return undefined;
+  const [, day, month, year] = match;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+// Whole-day difference between `dateIso` and today (negative = overdue). Both
+// sides are normalized to local midnight so the result doesn't drift by ±1
+// depending on what time of day it's computed.
+function daysUntil(dateIso: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(`${dateIso}T00:00:00`);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
+interface DueUrgency {
+  label: string;
+  tone: 'red' | 'orange' | 'green' | 'slate';
+}
+
+// Drives the badge coloring used on the Calendario modal and on entity/position
+// cards: an explicit "Completado" always reads green, an explicit "Riesgo"
+// always reads red, otherwise the badge is derived purely from how many days
+// remain until `dueDate` (red < today, orange <= 7 days, green beyond that).
+function getDueUrgency(dueDate: string | undefined, commitmentStatus: CommitmentStatus | undefined): DueUrgency {
+  if (commitmentStatus === 'Completado') return { label: 'Completado', tone: 'green' };
+  if (!dueDate) return { label: commitmentStatus || 'Sin fecha', tone: 'slate' };
+
+  const days = daysUntil(dueDate);
+  if (commitmentStatus === 'Riesgo') {
+    return { label: days < 0 ? `En riesgo · vencido hace ${Math.abs(days)}d` : `En riesgo · ${days}d`, tone: 'red' };
+  }
+  if (days < 0) return { label: `Vencido hace ${Math.abs(days)}d`, tone: 'red' };
+  if (days === 0) return { label: 'Vence hoy', tone: 'orange' };
+  if (days <= 7) return { label: `${days}d restantes`, tone: 'orange' };
+  return { label: `${days}d restantes`, tone: 'green' };
+}
+
+const URGENCY_TONE_STYLES: Record<DueUrgency['tone'], string> = {
+  red: 'border-red-400/60 bg-red-500/15 text-red-200',
+  orange: 'border-orange-400/60 bg-orange-500/15 text-orange-200',
+  green: 'border-emerald-400/60 bg-emerald-500/15 text-emerald-200',
+  slate: 'border-slate-600 bg-slate-800/60 text-slate-300',
+};
+
+function DueDateBadge({ dueDate, commitmentStatus }: { dueDate: string; commitmentStatus?: CommitmentStatus }) {
+  const urgency = getDueUrgency(dueDate, commitmentStatus);
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold ${URGENCY_TONE_STYLES[urgency.tone]}`}>
+      {urgency.tone === 'red' && <AlertTriangle className="h-2.5 w-2.5" />}
+      {urgency.tone === 'orange' && <Clock className="h-2.5 w-2.5" />}
+      {urgency.tone === 'green' && <CheckCircle2 className="h-2.5 w-2.5" />}
+      {urgency.label}
+    </span>
+  );
+}
+
 function getTagColorStyle(color: TagColorKey) {
   return TAG_COLOR_STYLES[color] || TAG_COLOR_STYLES.slate;
 }
@@ -283,6 +384,7 @@ const JULY_LICITATION_ENTITIES: BoardEntity[] = [
     closeDate: '07/08/2026',
     status: 'Retiro DIVAE',
     description: 'Presupuesto: USD 13.557.150 | Cierre: 07/08/2026 | Estado: Retiro DIVAE',
+    dueDate: parseDdMmYyyyToIso('07/08/2026'),
   },
   {
     id: 'lic-21-2026-adquisicion-vehiculos',
@@ -294,6 +396,7 @@ const JULY_LICITATION_ENTITIES: BoardEntity[] = [
     closeDate: '14/09/2026',
     status: 'Por Email',
     description: 'Presupuesto: USD 4.197.166 | Cierre: 14/09/2026 | Estado: Por Email',
+    dueDate: parseDdMmYyyyToIso('14/09/2026'),
   },
   {
     id: 'lic-11-2025-municion-556-ss109',
@@ -305,6 +408,7 @@ const JULY_LICITATION_ENTITIES: BoardEntity[] = [
     closeDate: 'Contrato',
     status: 'Fabricacion',
     description: 'Presupuesto: USD 2.184.000 | Cierre: Contrato | Estado: Fabricacion',
+    dueDate: parseDdMmYyyyToIso('Contrato'),
   },
   {
     id: 'lic-45-2024-cadenas-grupos-carpa',
@@ -316,6 +420,7 @@ const JULY_LICITATION_ENTITIES: BoardEntity[] = [
     closeDate: 'Esperando',
     status: 'Prorroga CTO',
     description: 'Presupuesto: USD 898.450 | Cierre: Esperando | Estado: Prorroga CTO',
+    dueDate: parseDdMmYyyyToIso('Esperando'),
   },
   {
     id: 'lic-23-2026-kits-mantenimiento-vehiculos',
@@ -327,6 +432,7 @@ const JULY_LICITATION_ENTITIES: BoardEntity[] = [
     closeDate: '08/09/2026',
     status: 'Por Email',
     description: 'Presupuesto: USD 414.242,84 | Cierre: 08/09/2026 | Estado: Por Email',
+    dueDate: parseDdMmYyyyToIso('08/09/2026'),
   },
   {
     id: 'lic-20-2026-kit-kim-f1',
@@ -338,6 +444,7 @@ const JULY_LICITATION_ENTITIES: BoardEntity[] = [
     closeDate: '25/08/2026',
     status: 'Resp. por Email',
     description: 'Presupuesto: USD 314.369,24 | Cierre: 25/08/2026 | Estado: Resp. por Email',
+    dueDate: parseDdMmYyyyToIso('25/08/2026'),
   },
   {
     id: 'lic-19-2026-montana-lautaro-ii',
@@ -349,6 +456,7 @@ const JULY_LICITATION_ENTITIES: BoardEntity[] = [
     closeDate: '05/08/2026',
     status: 'Resp. por Email',
     description: 'Presupuesto: USD 84.353 | Cierre: 05/08/2026 | Estado: Resp. por Email',
+    dueDate: parseDdMmYyyyToIso('05/08/2026'),
   },
   {
     id: 'lic-1238177-arriendo-vehiculos-seguridad',
@@ -359,6 +467,7 @@ const JULY_LICITATION_ENTITIES: BoardEntity[] = [
     closeDate: '07/08/2026',
     status: 'Portal',
     description: 'Cierre: 07/08/2026 | Estado: Portal',
+    dueDate: parseDdMmYyyyToIso('07/08/2026'),
   },
   {
     id: 'lic-rfi-chalecos-antibalas-l5',
@@ -369,6 +478,7 @@ const JULY_LICITATION_ENTITIES: BoardEntity[] = [
     closeDate: '24/07/2026',
     status: 'Por Email',
     description: 'Cierre: 24/07/2026 | Estado: Por Email',
+    dueDate: parseDdMmYyyyToIso('24/07/2026'),
   },
 ];
 
@@ -493,6 +603,9 @@ function normalizePosition(position: Partial<Position> & { id?: string }): Posit
     fte: typeof position.fte === 'number' && position.fte > 0 && position.fte <= 1 ? position.fte : 1,
     assignedPersonId: typeof position.assignedPersonId === 'string' ? position.assignedPersonId : null,
     tasks: Array.isArray(position.tasks) ? position.tasks.filter((task): task is string => typeof task === 'string') : [],
+    startDate: typeof position.startDate === 'string' && position.startDate ? position.startDate : undefined,
+    dueDate: typeof position.dueDate === 'string' && position.dueDate ? position.dueDate : undefined,
+    commitmentStatus: isCommitmentStatus(position.commitmentStatus) ? position.commitmentStatus : undefined,
   };
 }
 
@@ -521,6 +634,7 @@ function normalizeBoardState(state: BoardState): BoardState {
   const peopleIds = new Set(people.map((person) => person.id));
   const entities = rawEntities.map((entity) => ({
     ...entity,
+    commitmentStatus: isCommitmentStatus(entity.commitmentStatus) ? entity.commitmentStatus : undefined,
     positions: (Array.isArray(entity.positions) ? entity.positions : [])
       .map(normalizePosition)
       // A position whose assigned person no longer exists (e.g. deleted from
@@ -605,6 +719,30 @@ function loadTheme(): ThemeMode {
   if (typeof window === 'undefined') return 'dark';
   const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
   return storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'dark';
+}
+
+function isValidSnapshot(value: unknown): value is BoardSnapshot {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<BoardSnapshot>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.name === 'string' &&
+    typeof candidate.createdAt === 'string' &&
+    isValidBoardState(candidate.state)
+  );
+}
+
+function loadSnapshots(): BoardSnapshot[] {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const stored = window.localStorage.getItem(SNAPSHOTS_STORAGE_KEY);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed.filter(isValidSnapshot) : [];
+  } catch {
+    return [];
+  }
 }
 
 function HighlightedText({ text, query }: { text: string; query: string }) {
@@ -1193,6 +1331,11 @@ function PositionCard({
             )}
           </div>
           {position.department && <p className="mt-0.5 truncate text-[10px] font-medium text-slate-500">{position.department}</p>}
+          {position.dueDate && (
+            <div className="mt-1.5">
+              <DueDateBadge dueDate={position.dueDate} commitmentStatus={position.commitmentStatus} />
+            </div>
+          )}
           {assignedPerson && (
             <div
               ref={setPersonDragRef}
@@ -1531,6 +1674,11 @@ function EntityColumn({
             </span>
             <h3 className={`mt-2 break-words font-display font-extrabold leading-tight text-white ${fitMode ? 'text-sm' : 'text-lg'}`}>{entity.name}</h3>
             <LicitationEntitySummary entity={entity} />
+            {entity.dueDate && (
+              <div className="mt-1.5">
+                <DueDateBadge dueDate={entity.dueDate} commitmentStatus={entity.commitmentStatus} />
+              </div>
+            )}
             {!fitMode && <p className="mt-1 line-clamp-2 min-h-[32px] text-xs leading-relaxed text-white/80">{entity.description}</p>}
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -2683,6 +2831,377 @@ function PersonTaskSummaryModal({
   );
 }
 
+interface CalendarEvent {
+  id: string;
+  date: string; // ISO YYYY-MM-DD
+  title: string;
+  entity: BoardEntity;
+  personIds: string[];
+  commitmentStatus?: CommitmentStatus;
+  kind: 'entity' | 'position';
+}
+
+// Agenda/calendar view of every dated commitment on the board: entity-level
+// dates (licitación cierres, project/task deliverables) plus per-position
+// delivery dates, grouped by month and filterable by persona/entidad.
+function CalendarModal({
+  isOpen,
+  onClose,
+  entities,
+  people,
+  assignments,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  entities: BoardEntity[];
+  people: Person[];
+  assignments: Assignment[];
+}) {
+  const [personFilter, setPersonFilter] = useState('todas');
+  const [entityFilter, setEntityFilter] = useState('todas');
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  const peopleById = useMemo(() => new Map(people.map((person) => [person.id, person])), [people]);
+
+  const events = useMemo(() => {
+    const list: CalendarEvent[] = [];
+
+    entities.forEach((entity) => {
+      const positions = entity.positions || [];
+      const entityPersonIds = new Set<string>([
+        ...assignments.filter((assignment) => assignment.entityId === entity.id).map((assignment) => assignment.personId),
+        ...positions.map((position) => position.assignedPersonId).filter((personId): personId is string => Boolean(personId)),
+      ]);
+
+      if (entity.dueDate) {
+        list.push({
+          id: `entity-${entity.id}`,
+          date: entity.dueDate,
+          title: entity.type === 'licitacion' ? `Cierre de licitación: ${entity.name}` : `Vencimiento: ${entity.name}`,
+          entity,
+          personIds: Array.from(entityPersonIds),
+          commitmentStatus: entity.commitmentStatus,
+          kind: 'entity',
+        });
+      }
+
+      positions.forEach((position) => {
+        if (!position.dueDate) return;
+        list.push({
+          id: `position-${position.id}`,
+          date: position.dueDate,
+          title: position.title,
+          entity,
+          personIds: position.assignedPersonId ? [position.assignedPersonId] : [],
+          commitmentStatus: position.commitmentStatus,
+          kind: 'position',
+        });
+      });
+    });
+
+    return list.sort((a, b) => a.date.localeCompare(b.date));
+  }, [assignments, entities]);
+
+  const filteredEvents = useMemo(
+    () =>
+      events.filter((event) => {
+        const matchesPerson = personFilter === 'todas' || event.personIds.includes(personFilter);
+        const matchesEntity = entityFilter === 'todas' || event.entity.id === entityFilter;
+        return matchesPerson && matchesEntity;
+      }),
+    [entityFilter, events, personFilter]
+  );
+
+  const groupedByMonth = useMemo(() => {
+    const groups = new Map<string, CalendarEvent[]>();
+    filteredEvents.forEach((event) => {
+      const monthKey = event.date.slice(0, 7); // YYYY-MM
+      const bucket = groups.get(monthKey) || [];
+      bucket.push(event);
+      groups.set(monthKey, bucket);
+    });
+    return Array.from(groups.entries());
+  }, [filteredEvents]);
+
+  if (!isOpen) return null;
+
+  const formatMonthLabel = (monthKey: string) => {
+    const label = new Date(`${monthKey}-01T00:00:00`).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+
+  const formatEventDate = (dateIso: string) =>
+    new Date(`${dateIso}T00:00:00`).toLocaleDateString('es-CL', { weekday: 'short', day: '2-digit', month: 'short' });
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="flex max-h-[88vh] w-full max-w-3xl flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-800 p-5">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <Calendar className="h-3 w-3" />
+              Calendario de Compromisos
+            </span>
+            <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-white">Cronograma de Vencimientos</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Cierres de licitaciones, entregas de proyectos y tareas comprometidas, ordenados cronológicamente.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap gap-2 border-b border-slate-800 p-4">
+          <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">
+            Persona
+            <select
+              value={personFilter}
+              onChange={(event) => setPersonFilter(event.target.value)}
+              className="min-w-[160px] bg-transparent text-xs font-semibold text-slate-100 outline-none"
+            >
+              <option value="todas" className="bg-slate-950">Todas</option>
+              {people.map((person) => (
+                <option key={person.id} value={person.id} className="bg-slate-950">{person.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">
+            Entidad
+            <select
+              value={entityFilter}
+              onChange={(event) => setEntityFilter(event.target.value)}
+              className="min-w-[160px] bg-transparent text-xs font-semibold text-slate-100 outline-none"
+            >
+              <option value="todas" className="bg-slate-950">Todas</option>
+              {entities.map((entity) => (
+                <option key={entity.id} value={entity.id} className="bg-slate-950">{entity.name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="flex-1 space-y-5 overflow-y-auto p-5">
+          {groupedByMonth.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+              No hay fechas de vencimiento registradas para este filtro.
+            </p>
+          ) : (
+            groupedByMonth.map(([monthKey, monthEvents]) => (
+              <section key={monthKey}>
+                <h3 className="mb-2 text-xs font-extrabold uppercase tracking-wider text-slate-500">{formatMonthLabel(monthKey)}</h3>
+                <div className="space-y-2">
+                  {monthEvents.map((event) => {
+                    const urgency = getDueUrgency(event.date, event.commitmentStatus);
+                    const meta = ENTITY_META[event.entity.type];
+                    const relatedPeople = event.personIds
+                      .map((personId) => peopleById.get(personId))
+                      .filter((person): person is Person => Boolean(person));
+
+                    return (
+                      <div key={event.id} className="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                            {formatEventDate(event.date)}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${URGENCY_TONE_STYLES[urgency.tone]}`}>
+                            {urgency.tone === 'red' && <AlertTriangle className="h-3 w-3" />}
+                            {urgency.tone === 'orange' && <Clock className="h-3 w-3" />}
+                            {urgency.tone === 'green' && <CheckCircle2 className="h-3 w-3" />}
+                            {urgency.label}
+                          </span>
+                        </div>
+                        <p className="mt-2 break-words text-sm font-bold text-slate-100">{event.title}</p>
+                        <p className="mt-0.5 text-[11px] text-slate-500">{meta.label} · {event.entity.name}</p>
+                        {relatedPeople.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {relatedPeople.map((person) => (
+                              <span key={person.id} className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[9px] font-semibold text-slate-300">
+                                {person.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// "Histórico de Procesos": save/restore point-in-time snapshots of the whole
+// board. Restoring replaces the live board wholesale (with a confirm), so it's
+// the same trust level as importing an exported JSON file.
+function HistoryModal({
+  isOpen,
+  onClose,
+  snapshots,
+  onSave,
+  onRestore,
+  onDelete,
+  onDownload,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  snapshots: BoardSnapshot[];
+  onSave: (name: string, notes: string) => void;
+  onRestore: (snapshotId: string) => void;
+  onDelete: (snapshotId: string) => void;
+  onDownload: (snapshot: BoardSnapshot) => void;
+}) {
+  const [name, setName] = useState('');
+  const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const sortedSnapshots = [...snapshots].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const submitSave = (event: React.FormEvent) => {
+    event.preventDefault();
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    onSave(cleanName, notes.trim());
+    setName('');
+    setNotes('');
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-800 p-5">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <History className="h-3 w-3" />
+              Histórico de Procesos
+            </span>
+            <h2 className="mt-3 font-display text-xl font-extrabold leading-tight text-white">Guardar y Restaurar Versiones</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Guarda el estado completo del tablero como un punto en el tiempo — por ejemplo, tras una reunión — y vuelve a él cuando lo necesites.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={submitSave} className="shrink-0 space-y-3 border-b border-slate-800 p-5">
+          <label className="text-xs font-bold text-slate-400">
+            Nombre del proceso / versión
+            <input
+              required
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder='Ej: "Acuerdos Reunión Delegación 11-Ago"'
+              className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500"
+            />
+          </label>
+          <label className="text-xs font-bold text-slate-400">
+            Notas de compromiso
+            <textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              rows={2}
+              placeholder="Acuerdos, pendientes o contexto de esta versión..."
+              className="mt-1 w-full resize-none rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500"
+            />
+          </label>
+          <div className="flex justify-end">
+            <button type="submit" className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500">
+              <Save className="h-3.5 w-3.5" />
+              Guardar versión actual
+            </button>
+          </div>
+        </form>
+
+        <div className="flex-1 space-y-2.5 overflow-y-auto p-5">
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Versiones guardadas ({sortedSnapshots.length})</p>
+          {sortedSnapshots.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+              Todavía no hay versiones guardadas.
+            </p>
+          ) : (
+            sortedSnapshots.map((snapshot) => (
+              <div key={snapshot.id} className="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-bold text-slate-100">{snapshot.name}</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                      {new Date(snapshot.createdAt).toLocaleString('es-CL', { dateStyle: 'medium', timeStyle: 'short' })}
+                      {' · '}
+                      {snapshot.state.entities.length} entidades · {snapshot.state.people.length} personas
+                    </p>
+                    {snapshot.notes && <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">{snapshot.notes}</p>}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onRestore(snapshot.id)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-[10px] font-bold text-slate-300 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
+                      title="Restaurar esta versión"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Restaurar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDownload(snapshot)}
+                      className="rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-400 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+                      title="Descargar esta versión como JSON"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(snapshot.id)}
+                      className="rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-400 transition-colors hover:border-red-400/50 hover:text-red-300"
+                      title="Eliminar esta versión"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [board, setBoard] = useState<BoardState>(loadState);
   const [theme, setTheme] = useState<ThemeMode>(loadTheme);
@@ -2712,6 +3231,9 @@ export default function App() {
   const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
   const [isHoldingModalOpen, setIsHoldingModalOpen] = useState(false);
   const [isPositionModalOpen, setIsPositionModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
+  const [snapshots, setSnapshots] = useState<BoardSnapshot[]>(loadSnapshots);
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const [editingEntityId, setEditingEntityId] = useState<string | null>(null);
   const [editingHoldingId, setEditingHoldingId] = useState<string | null>(null);
@@ -2748,6 +3270,9 @@ export default function App() {
     name: '',
     type: 'empresa' as EntityType,
     description: '',
+    startDate: '',
+    dueDate: '',
+    commitmentStatus: '' as CommitmentStatus | '',
   });
 
   const [holdingForm, setHoldingForm] = useState({
@@ -2762,6 +3287,9 @@ export default function App() {
     fte: 1,
     assignedPersonId: '',
     tasks: [] as string[],
+    startDate: '',
+    dueDate: '',
+    commitmentStatus: '' as CommitmentStatus | '',
   });
   const [positionTaskInput, setPositionTaskInput] = useState('');
 
@@ -2773,6 +3301,10 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(board));
   }, [board]);
+
+  useEffect(() => {
+    window.localStorage.setItem(SNAPSHOTS_STORAGE_KEY, JSON.stringify(snapshots));
+  }, [snapshots]);
 
   useEffect(() => {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -2882,19 +3414,61 @@ export default function App() {
     }, 3000);
   };
 
-  const handleExportBoard = () => {
-    const dataStr = JSON.stringify(board, null, 2);
+  const downloadBoardJson = (state: BoardState, filename: string) => {
+    const dataStr = JSON.stringify(state, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const timestamp = new Date().toISOString().slice(0, 10);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `tablero-organigrama-${timestamp}.json`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportBoard = () => {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadBoardJson(board, `tablero-organigrama-${timestamp}.json`);
     showToast('Tablero exportado como archivo JSON.', 'success');
+  };
+
+  const handleSaveSnapshot = (name: string, notes: string) => {
+    const snapshot: BoardSnapshot = {
+      id: createId('snapshot'),
+      name,
+      notes,
+      createdAt: new Date().toISOString(),
+      state: board,
+    };
+    setSnapshots((prev) => [...prev, snapshot]);
+    showToast(`Versión "${name}" guardada en el histórico.`, 'success');
+  };
+
+  const handleRestoreSnapshot = (snapshotId: string) => {
+    const snapshot = snapshots.find((candidate) => candidate.id === snapshotId);
+    if (!snapshot) return;
+    if (!window.confirm(`¿Restaurar la versión "${snapshot.name}"? Reemplazará todos los datos actuales del tablero.`)) return;
+
+    setBoard(normalizeBoardState(snapshot.state));
+    setSelectedPersonId(null);
+    setSelectedConnectionPersonId(null);
+    showToast(`Versión "${snapshot.name}" restaurada.`, 'success');
+  };
+
+  const handleDeleteSnapshot = (snapshotId: string) => {
+    const snapshot = snapshots.find((candidate) => candidate.id === snapshotId);
+    if (!snapshot) return;
+    if (!window.confirm(`¿Eliminar definitivamente la versión "${snapshot.name}"?`)) return;
+
+    setSnapshots((prev) => prev.filter((candidate) => candidate.id !== snapshotId));
+    showToast(`Versión "${snapshot.name}" eliminada.`, 'warning');
+  };
+
+  const handleDownloadSnapshot = (snapshot: BoardSnapshot) => {
+    const safeName = snapshot.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'version';
+    downloadBoardJson(snapshot.state, `historico-${safeName}-${snapshot.createdAt.slice(0, 10)}.json`);
+    showToast('Versión descargada como archivo JSON.', 'success');
   };
 
   const handleImportClick = () => {
@@ -3111,7 +3685,7 @@ export default function App() {
 
   const openNewEntityModal = () => {
     setEditingEntityId(null);
-    setEntityForm({ name: '', type: 'empresa', description: '' });
+    setEntityForm({ name: '', type: 'empresa', description: '', startDate: '', dueDate: '', commitmentStatus: '' });
     setIsEntityModalOpen(true);
   };
 
@@ -3121,6 +3695,9 @@ export default function App() {
       name: entity.name,
       type: entity.type,
       description: entity.description,
+      startDate: entity.startDate || '',
+      dueDate: entity.dueDate || '',
+      commitmentStatus: entity.commitmentStatus || '',
     });
     setIsEntityModalOpen(true);
   };
@@ -3128,6 +3705,12 @@ export default function App() {
   const handleSaveEntity = (event: React.FormEvent) => {
     event.preventDefault();
     if (!entityForm.name.trim()) return;
+
+    const dateFields = {
+      startDate: entityForm.startDate || undefined,
+      dueDate: entityForm.dueDate || undefined,
+      commitmentStatus: entityForm.commitmentStatus || undefined,
+    };
 
     if (editingEntityId) {
       setBoard((prev) => ({
@@ -3139,6 +3722,7 @@ export default function App() {
                 name: entityForm.name.trim(),
                 type: entityForm.type,
                 description: entityForm.description.trim() || 'Columna horizontal de trabajo.',
+                ...dateFields,
               }
             : entity
         ),
@@ -3154,10 +3738,11 @@ export default function App() {
       name: entityForm.name.trim(),
       type: entityForm.type,
       description: entityForm.description.trim() || 'Columna horizontal de trabajo.',
+      ...dateFields,
     };
 
     setBoard((prev) => ({ ...prev, entities: [...prev.entities, entity], entitiesOrder: [...prev.entitiesOrder, entity.id] }));
-    setEntityForm({ name: '', type: 'empresa', description: '' });
+    setEntityForm({ name: '', type: 'empresa', description: '', startDate: '', dueDate: '', commitmentStatus: '' });
     setIsEntityModalOpen(false);
     showToast(`${entity.name} creado como ${ENTITY_META[entity.type].label}.`, 'success');
   };
@@ -3210,7 +3795,7 @@ export default function App() {
   const openNewPositionModal = (entityId: string) => {
     setEditingPositionId(null);
     setPositionEntityId(entityId);
-    setPositionForm({ title: '', department: '', fte: 1, assignedPersonId: '', tasks: [] });
+    setPositionForm({ title: '', department: '', fte: 1, assignedPersonId: '', tasks: [], startDate: '', dueDate: '', commitmentStatus: '' });
     setPositionTaskInput('');
     setIsPositionModalOpen(true);
   };
@@ -3224,6 +3809,9 @@ export default function App() {
       fte: position.fte,
       assignedPersonId: position.assignedPersonId || '',
       tasks: position.tasks || [],
+      startDate: position.startDate || '',
+      dueDate: position.dueDate || '',
+      commitmentStatus: position.commitmentStatus || '',
     });
     setPositionTaskInput('');
     setIsPositionModalOpen(true);
@@ -3246,6 +3834,11 @@ export default function App() {
 
     const cleanTitle = positionForm.title.trim();
     const cleanDepartment = positionForm.department.trim();
+    const dateFields = {
+      startDate: positionForm.startDate || undefined,
+      dueDate: positionForm.dueDate || undefined,
+      commitmentStatus: positionForm.commitmentStatus || undefined,
+    };
 
     if (editingPositionId) {
       setBoard((prev) => ({
@@ -3263,6 +3856,7 @@ export default function App() {
                         fte: positionForm.fte,
                         assignedPersonId: positionForm.assignedPersonId || null,
                         tasks: positionForm.tasks,
+                        ...dateFields,
                       }
                     : position
                 ),
@@ -3279,6 +3873,7 @@ export default function App() {
         fte: positionForm.fte,
         assignedPersonId: positionForm.assignedPersonId || null,
         tasks: positionForm.tasks,
+        ...dateFields,
       };
       setBoard((prev) => ({
         ...prev,
@@ -4030,6 +4625,24 @@ export default function App() {
               </button>
               <button
                 type="button"
+                onClick={() => setIsCalendarModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                title="Ver calendario de vencimientos y compromisos"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                Calendario
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsHistoryModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                title="Guardar o restaurar versiones del tablero (histórico de procesos)"
+              >
+                <History className="h-3.5 w-3.5" />
+                Guardar Histórico
+              </button>
+              <button
+                type="button"
                 onClick={handleExportBoard}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
                 title="Descargar el tablero completo como archivo JSON"
@@ -4371,6 +4984,24 @@ export default function App() {
         onTogglePositionTask={handleTogglePositionTask}
         onRemovePositionTask={handleRemovePositionTask}
         onUpdateAssignmentTask={handleUpdateAssignmentTask}
+      />
+
+      <CalendarModal
+        isOpen={isCalendarModalOpen}
+        onClose={() => setIsCalendarModalOpen(false)}
+        entities={orderedEntities}
+        people={board.people}
+        assignments={board.assignments}
+      />
+
+      <HistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        snapshots={snapshots}
+        onSave={handleSaveSnapshot}
+        onRestore={handleRestoreSnapshot}
+        onDelete={handleDeleteSnapshot}
+        onDownload={handleDownloadSnapshot}
       />
 
       {selectedPerson && (
@@ -4772,6 +5403,39 @@ export default function App() {
                 Descripción
                 <textarea value={entityForm.description} onChange={(event) => setEntityForm({ ...entityForm, description: event.target.value })} rows={3} className="mt-1 w-full resize-none rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-emerald-500" />
               </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-xs font-bold text-slate-400">
+                  Fecha de inicio
+                  <input
+                    type="date"
+                    value={entityForm.startDate}
+                    onChange={(event) => setEntityForm({ ...entityForm, startDate: event.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-emerald-500"
+                  />
+                </label>
+                <label className="text-xs font-bold text-slate-400">
+                  Fecha de término / vencimiento
+                  <input
+                    type="date"
+                    value={entityForm.dueDate}
+                    onChange={(event) => setEntityForm({ ...entityForm, dueDate: event.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-emerald-500"
+                  />
+                </label>
+              </div>
+              <label className="text-xs font-bold text-slate-400">
+                Estado del compromiso
+                <select
+                  value={entityForm.commitmentStatus}
+                  onChange={(event) => setEntityForm({ ...entityForm, commitmentStatus: event.target.value as CommitmentStatus | '' })}
+                  className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-emerald-500"
+                >
+                  <option value="">Sin definir</option>
+                  {COMMITMENT_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
@@ -4908,6 +5572,39 @@ export default function App() {
                   <option value="">-- Vacante (Asignar después) --</option>
                   {board.people.map((person) => (
                     <option key={person.id} value={person.id}>{person.name}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-xs font-bold text-slate-400">
+                  Fecha de inicio
+                  <input
+                    type="date"
+                    value={positionForm.startDate}
+                    onChange={(event) => setPositionForm({ ...positionForm, startDate: event.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                  />
+                </label>
+                <label className="text-xs font-bold text-slate-400">
+                  Fecha de entrega
+                  <input
+                    type="date"
+                    value={positionForm.dueDate}
+                    onChange={(event) => setPositionForm({ ...positionForm, dueDate: event.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                  />
+                </label>
+              </div>
+              <label className="text-xs font-bold text-slate-400">
+                Estado del compromiso
+                <select
+                  value={positionForm.commitmentStatus}
+                  onChange={(event) => setPositionForm({ ...positionForm, commitmentStatus: event.target.value as CommitmentStatus | '' })}
+                  className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                >
+                  <option value="">Sin definir</option>
+                  {COMMITMENT_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>{status}</option>
                   ))}
                 </select>
               </label>
