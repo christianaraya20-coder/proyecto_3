@@ -22,9 +22,11 @@ import {
   GripVertical,
   Layers3,
   Link2,
+  Moon,
   Network,
   Plus,
   Search,
+  Sun,
   Trash2,
   Upload,
   User,
@@ -48,6 +50,7 @@ type RoleType =
   | 'Tecnología';
 
 type EntityType = 'empresa' | 'proyecto' | 'licitacion' | 'tarea';
+type ThemeMode = 'dark' | 'light';
 
 interface Person {
   id: string;
@@ -104,6 +107,7 @@ interface ConnectionLine {
 
 const STORAGE_KEY = 'horizontal-board-state-v1';
 const LEGACY_STORAGE_KEY = 'holding-organigrama-employees-v1';
+const THEME_STORAGE_KEY = 'theme';
 
 const ENTITY_META: Record<EntityType, { label: string; icon: React.ElementType; className: string }> = {
   empresa: {
@@ -252,6 +256,12 @@ function loadState(): BoardState {
   }
 
   return INITIAL_STATE;
+}
+
+function loadTheme(): ThemeMode {
+  if (typeof window === 'undefined') return 'dark';
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  return storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'dark';
 }
 
 function HighlightedText({ text, query }: { text: string; query: string }) {
@@ -541,6 +551,7 @@ function EntityColumn({
 
 export default function App() {
   const [board, setBoard] = useState<BoardState>(loadState);
+  const [theme, setTheme] = useState<ThemeMode>(loadTheme);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'Todos' | RoleType>('Todos');
   const [entityTypeFilter, setEntityTypeFilter] = useState<'todos' | EntityType>('todos');
@@ -584,6 +595,12 @@ export default function App() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(board));
   }, [board]);
 
+  useEffect(() => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    document.documentElement.dataset.theme = theme;
+    document.body.dataset.theme = theme;
+  }, [theme]);
+
   const selectedPerson = useMemo(
     () => board.people.find((person) => person.id === selectedPersonId) || null,
     [board.people, selectedPersonId]
@@ -623,6 +640,9 @@ export default function App() {
       connections: board.connections.length,
     };
   }, [board]);
+
+  const connectionColor = theme === 'light' ? '#0369a1' : '#38bdf8';
+  const connectionTextColor = theme === 'light' ? '#0c4a6e' : '#bae6fd';
 
   const showToast = (message: string, type: ToastMessage['type'] = 'success') => {
     const id = Date.now();
@@ -997,7 +1017,7 @@ export default function App() {
   }, [manualAssignableEntities, manualAssignEntityId, selectedPerson]);
 
   return (
-    <div className="min-h-screen overflow-hidden text-slate-100">
+    <div className={`theme-${theme} min-h-screen overflow-hidden text-slate-100 transition-colors duration-300`}>
       {toasts.length > 0 && (
         <div className="fixed right-4 top-4 z-[90] flex w-[min(calc(100vw-2rem),380px)] flex-col gap-2">
           {toasts.map((toast) => (
@@ -1087,6 +1107,15 @@ export default function App() {
               >
                 <Upload className="h-3.5 w-3.5" />
                 Importar JSON
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              >
+                {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+                {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
               </button>
               <input
                 ref={importInputRef}
@@ -1182,7 +1211,7 @@ export default function App() {
               <svg className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible">
                 <defs>
                   <marker id="arrow-head" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
-                    <path d="M 0 0 L 8 4 L 0 8 z" fill="#38bdf8" />
+                    <path d="M 0 0 L 8 4 L 0 8 z" fill={connectionColor} />
                   </marker>
                 </defs>
                 {connectionLines.map((line) => {
@@ -1196,12 +1225,12 @@ export default function App() {
                         d={`M ${line.x1} ${line.y1} C ${line.x1 + curve} ${line.y1}, ${line.x2 - curve} ${line.y2}, ${line.x2} ${line.y2}`}
                         fill="none"
                         markerEnd="url(#arrow-head)"
-                        stroke="#38bdf8"
+                        stroke={connectionColor}
                         strokeDasharray="7 7"
                         strokeLinecap="round"
                         strokeWidth="2"
                       />
-                      <text x={midX} y={midY - 8} fill="#bae6fd" fontSize="11" fontWeight="700" textAnchor="middle">
+                      <text x={midX} y={midY - 8} fill={connectionTextColor} fontSize="11" fontWeight="700" textAnchor="middle">
                         {line.label}
                       </text>
                     </g>
