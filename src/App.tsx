@@ -30,6 +30,7 @@ import {
   ChevronUp,
   ClipboardList,
   Clock,
+  CornerRightUp,
   Crown,
   Download,
   Edit2,
@@ -97,6 +98,7 @@ interface Person {
   skills: string[];
   customTags: CustomTag[];
   supervisor: string;
+  managerId?: string;
 }
 
 // SSoT: a Position (Puesto) belongs to an Entity and exists independently of any
@@ -567,7 +569,7 @@ function isValidBoardState(value: unknown): value is BoardState {
   );
 }
 
-// `skills` / `customTags` / `supervisor` were introduced after boards were already
+// `skills` / `customTags` / `supervisor` / `managerId` were introduced after boards were already
 // saved/exported. Backfill them so older stored/imported people keep working.
 function normalizePerson(person: Partial<Person> & { id: string; name: string }): Person {
   const rawTags = Array.isArray(person.customTags) ? person.customTags : [];
@@ -589,6 +591,7 @@ function normalizePerson(person: Partial<Person> & { id: string; name: string })
         color: tag.color && TAG_COLOR_OPTIONS.includes(tag.color) ? tag.color : 'slate',
       })),
     supervisor: typeof person.supervisor === 'string' ? person.supervisor : '',
+    managerId: typeof person.managerId === 'string' ? person.managerId : '',
   };
 }
 
@@ -630,8 +633,21 @@ function normalizeBoardState(state: BoardState): BoardState {
     ...(taskIndex >= 0 ? orderWithoutReplacedLicitaciones.slice(taskIndex) : []),
   ];
 
-  const people = state.people.map(normalizePerson);
-  const peopleIds = new Set(people.map((person) => person.id));
+  const rawPeople = state.people.map(normalizePerson);
+  const peopleIds = new Set(rawPeople.map((person) => person.id));
+  const managerByConnection = new Map<string, string>();
+  state.connections.forEach((connection) => {
+    if (!managerByConnection.has(connection.sourcePersonId)) {
+      managerByConnection.set(connection.sourcePersonId, connection.targetPersonId);
+    }
+  });
+  const people = rawPeople.map((person) => {
+    const managerId = person.managerId || managerByConnection.get(person.id) || '';
+    return {
+      ...person,
+      managerId: managerId && managerId !== person.id && peopleIds.has(managerId) ? managerId : '',
+    };
+  });
   const entities = rawEntities.map((entity) => ({
     ...entity,
     commitmentStatus: isCommitmentStatus(entity.commitmentStatus) ? entity.commitmentStatus : undefined,
@@ -645,12 +661,25 @@ function normalizeBoardState(state: BoardState): BoardState {
           : position
       ),
   }));
+  const validConnections = state.connections.filter(
+    (connection) => peopleIds.has(connection.sourcePersonId) && peopleIds.has(connection.targetPersonId)
+  );
+  const existingConnectionKeys = new Set(validConnections.map((connection) => `${connection.sourcePersonId}:${connection.targetPersonId}`));
+  const managerConnections = people
+    .filter((person) => person.managerId && !existingConnectionKeys.has(`${person.id}:${person.managerId}`))
+    .map((person) => ({
+      id: createId('conn'),
+      sourcePersonId: person.id,
+      targetPersonId: person.managerId as string,
+      label: 'Reporta a',
+    }));
 
   return {
     ...state,
     entities,
     entitiesOrder: normalizedOrder,
     assignments: state.assignments.filter((assignment) => assignment.entityId !== 'entity-ejercito'),
+    connections: [...validConnections, ...managerConnections],
     people,
     holdingMembers: Array.isArray(state.holdingMembers) && state.holdingMembers.length > 0
       ? state.holdingMembers
@@ -659,7 +688,7 @@ function normalizeBoardState(state: BoardState): BoardState {
 }
 
 function loadState(): BoardState {
-  if (typeof window === 'undefined') return INITIAL_STATE;
+  if (typeof window === 'undefined') return normalizeBoardState(INITIAL_STATE);
 
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -709,10 +738,10 @@ function loadState(): BoardState {
       }
     }
   } catch {
-    return INITIAL_STATE;
+    return normalizeBoardState(INITIAL_STATE);
   }
 
-  return INITIAL_STATE;
+  return normalizeBoardState(INITIAL_STATE);
 }
 
 function loadTheme(): ThemeMode {
@@ -775,6 +804,17 @@ function RoleBadge({ role }: { role: RoleType }) {
       <span className={`h-1.5 w-1.5 rounded-full ${colors.dot}`} />
       {role}
     </span>
+  );
+}
+
+function ManagerLine({ managerName, dense = false }: { managerName?: string; dense?: boolean }) {
+  if (!managerName) return null;
+
+  return (
+    <p className={`mt-1 inline-flex min-w-0 items-center gap-1 font-semibold text-sky-300/85 ${dense ? 'text-[10px]' : 'text-[11px]'}`}>
+      <CornerRightUp className="h-3 w-3 shrink-0" />
+      <span className="truncate">Reporta a: {managerName}</span>
+    </p>
   );
 }
 
@@ -898,6 +938,7 @@ function PersonCard({
   readOnly = false,
   highlighted = false,
   badgesExpanded = false,
+  managerName,
   onOpen,
   onConnect,
   onHover,
@@ -913,6 +954,7 @@ function PersonCard({
   readOnly?: boolean;
   highlighted?: boolean;
   badgesExpanded?: boolean;
+  managerName?: string;
   onOpen: (person: Person) => void;
   onConnect: (person: Person) => void;
   onHover?: (personId: string | null) => void;
@@ -956,6 +998,7 @@ function PersonCard({
           <h4 className={`break-words font-display font-bold leading-tight text-slate-100 ${dense ? 'text-xs' : 'text-sm'}`}>
             <HighlightedText text={person.name} query={searchQuery} />
           </h4>
+          <ManagerLine managerName={managerName} dense={dense || compact} />
           {!compact && <p className="mt-1 text-[11px] font-medium text-slate-500">{person.category}</p>}
         </div>
         {onOpenSummary && (
@@ -1031,6 +1074,7 @@ function AssignmentCard({
   canMoveUp,
   canMoveDown,
   badgesExpanded = false,
+  managerName,
   onOpen,
   onConnect,
   onRemoveAssignment,
@@ -1051,6 +1095,7 @@ function AssignmentCard({
   canMoveUp: boolean;
   canMoveDown: boolean;
   badgesExpanded?: boolean;
+  managerName?: string;
   onOpen: (person: Person) => void;
   onConnect: (person: Person) => void;
   onRemoveAssignment: (assignmentId: string) => void;
@@ -1096,6 +1141,7 @@ function AssignmentCard({
           <h4 className={`break-words font-display font-bold leading-tight text-slate-100 ${dense ? 'text-xs' : 'text-sm'}`}>
             <HighlightedText text={person.name} query={searchQuery} />
           </h4>
+          <ManagerLine managerName={managerName} dense={dense || compact} />
           {!compact && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{assignment.taskText || 'Sin función específica registrada.'}</p>}
         </div>
         {onOpenSummary && (
@@ -1301,6 +1347,9 @@ function PositionCard({
   const style = transform ? { transform: CSS.Transform.toString(transform), transition } : { transition };
   const personDragStyle = personDragTransform ? { transform: CSS.Transform.toString(personDragTransform) } : undefined;
   const assignedPersonId = assignedPerson?.id;
+  const assignedManagerName = assignedPerson?.managerId
+    ? people.find((candidate) => candidate.id === assignedPerson.managerId)?.name
+    : undefined;
 
   const submitNewTask = () => {
     const cleanTask = newTaskText.trim();
@@ -1352,6 +1401,7 @@ function PositionCard({
               <RoleBadge role={assignedPerson.role} />
             </div>
           )}
+          <ManagerLine managerName={assignedManagerName} dense />
           {(tasks.length > 0 || !readOnly) && (
             <div className="mt-1.5">
               <button
@@ -1788,6 +1838,7 @@ function EntityColumn({
                 {quickAssignments.map((assignment, assignmentIndex) => {
                   const person = people.find((candidate) => candidate.id === assignment.personId);
                   if (!person) return null;
+                  const managerName = person.managerId ? people.find((candidate) => candidate.id === person.managerId)?.name : undefined;
 
                   return (
                     <AssignmentCard
@@ -1803,6 +1854,7 @@ function EntityColumn({
                       readOnly={readOnly}
                       canMoveUp={assignmentIndex > 0}
                       canMoveDown={assignmentIndex < quickAssignments.length - 1}
+                      managerName={managerName}
                       badgesExpanded={expandedPersonIds.has(person.id)}
                       onOpen={onOpenPerson}
                       onConnect={onConnect}
@@ -1932,6 +1984,7 @@ function BankPersonEntry({
   selectedConnectionPersonId,
   hoveredPersonId,
   readOnly,
+  allPeople,
   entities,
   assignedEntityIds,
   badgesExpanded,
@@ -1950,6 +2003,7 @@ function BankPersonEntry({
   selectedConnectionPersonId: string | null;
   hoveredPersonId: string | null;
   readOnly: boolean;
+  allPeople: Person[];
   entities: BoardEntity[];
   assignedEntityIds: Set<string>;
   badgesExpanded: boolean;
@@ -1967,6 +2021,7 @@ function BankPersonEntry({
     [entities, assignedEntityIds]
   );
   const [selectedEntityId, setSelectedEntityId] = useState(assignableEntities[0]?.id || '');
+  const managerName = person.managerId ? allPeople.find((candidate) => candidate.id === person.managerId)?.name : undefined;
 
   useEffect(() => {
     if (!assignableEntities.some((entity) => entity.id === selectedEntityId)) {
@@ -1983,6 +2038,7 @@ function BankPersonEntry({
         highlighted={hoveredPersonId === person.id}
         connectionMode={connectionMode}
         readOnly={readOnly}
+        managerName={managerName}
         badgesExpanded={badgesExpanded}
         onOpen={onOpenPerson}
         onConnect={onConnect}
@@ -2075,6 +2131,7 @@ function BankDrawer({
   isOpen,
   onClose,
   people,
+  allPeople,
   totalCount,
   searchQuery,
   onSearchChange,
@@ -2103,6 +2160,7 @@ function BankDrawer({
   isOpen: boolean;
   onClose: () => void;
   people: Person[];
+  allPeople: Person[];
   totalCount: number;
   searchQuery: string;
   onSearchChange: (value: string) => void;
@@ -2232,6 +2290,7 @@ function BankDrawer({
                   selectedConnectionPersonId={selectedConnectionPersonId}
                   hoveredPersonId={hoveredPersonId}
                   readOnly={readOnly}
+                  allPeople={allPeople}
                   entities={entities}
                   assignedEntityIds={assignedEntityIds}
                   badgesExpanded={expandedPersonIds.has(person.id)}
@@ -3261,6 +3320,7 @@ export default function App() {
     skills: [] as string[],
     customTags: [] as CustomTag[],
     supervisor: '',
+    managerId: '',
   });
   const [skillInput, setSkillInput] = useState('');
   const [tagInput, setTagInput] = useState('');
@@ -3597,7 +3657,7 @@ export default function App() {
 
   const openNewPersonModal = () => {
     setEditingPersonId(null);
-    setPersonForm({ name: '', role: 'Operativo', category: '', email: '', phone: '', notes: '', skills: [], customTags: [], supervisor: '' });
+    setPersonForm({ name: '', role: 'Operativo', category: '', email: '', phone: '', notes: '', skills: [], customTags: [], supervisor: '', managerId: '' });
     setSkillInput('');
     setTagInput('');
     setTagColorInput('slate');
@@ -3616,6 +3676,7 @@ export default function App() {
       skills: person.skills,
       customTags: person.customTags,
       supervisor: person.supervisor,
+      managerId: person.managerId || '',
     });
     setSkillInput('');
     setTagInput('');
@@ -3661,6 +3722,7 @@ export default function App() {
       phone: personForm.phone.trim(),
       notes: personForm.notes.trim(),
       supervisor: personForm.supervisor.trim(),
+      managerId: personForm.managerId && personForm.managerId !== editingPersonId ? personForm.managerId : '',
     };
 
     if (editingPersonId) {
@@ -3669,6 +3731,12 @@ export default function App() {
         people: prev.people.map((person) =>
           person.id === editingPersonId ? { ...person, ...cleanPersonForm } : person
         ),
+        connections: [
+          ...prev.connections.filter((connection) => connection.sourcePersonId !== editingPersonId),
+          ...(cleanPersonForm.managerId
+            ? [{ id: createId('conn'), sourcePersonId: editingPersonId, targetPersonId: cleanPersonForm.managerId, label: 'Reporta a' }]
+            : []),
+        ],
       }));
       showToast('Persona actualizada.', 'success');
     } else {
@@ -3676,7 +3744,13 @@ export default function App() {
         id: createId('person'),
         ...cleanPersonForm,
       };
-      setBoard((prev) => ({ ...prev, people: [...prev.people, person] }));
+      setBoard((prev) => ({
+        ...prev,
+        people: [...prev.people, person],
+        connections: cleanPersonForm.managerId
+          ? [...prev.connections, { id: createId('conn'), sourcePersonId: person.id, targetPersonId: cleanPersonForm.managerId, label: 'Reporta a' }]
+          : prev.connections,
+      }));
       showToast(`${person.name} agregado al banco de personas.`, 'success');
     }
 
@@ -3755,7 +3829,9 @@ export default function App() {
 
     setBoard((prev) => ({
       ...prev,
-      people: prev.people.filter((candidate) => candidate.id !== personId),
+      people: prev.people
+        .filter((candidate) => candidate.id !== personId)
+        .map((candidate) => candidate.managerId === personId ? { ...candidate, managerId: '' } : candidate),
       assignments: prev.assignments.filter((assignment) => assignment.personId !== personId),
       connections: prev.connections.filter(
         (connection) => connection.sourcePersonId !== personId && connection.targetPersonId !== personId
@@ -4395,7 +4471,13 @@ export default function App() {
     );
 
     if (alreadyExists) {
-      setBoard((prev) => ({ ...prev, connections: prev.connections.filter((connection) => connection.id !== alreadyExists.id) }));
+      setBoard((prev) => ({
+        ...prev,
+        people: prev.people.map((candidate) =>
+          candidate.id === source.id && candidate.managerId === person.id ? { ...candidate, managerId: '' } : candidate
+        ),
+        connections: prev.connections.filter((connection) => connection.id !== alreadyExists.id),
+      }));
       setSelectedConnectionPersonId(null);
       showToast(`Conexión removida: ${source.name} → ${person.name}.`, 'warning');
       return;
@@ -4403,8 +4485,11 @@ export default function App() {
 
     setBoard((prev) => ({
       ...prev,
+      people: prev.people.map((candidate) =>
+        candidate.id === source.id ? { ...candidate, managerId: person.id } : candidate
+      ),
       connections: [
-        ...prev.connections,
+        ...prev.connections.filter((connection) => connection.sourcePersonId !== source.id),
         { id: createId('conn'), sourcePersonId: source.id, targetPersonId: person.id, label: 'Reporta a' },
       ],
     }));
@@ -4427,7 +4512,20 @@ export default function App() {
   };
 
   const handleRemoveConnection = (connectionId: string) => {
-    setBoard((prev) => ({ ...prev, connections: prev.connections.filter((connection) => connection.id !== connectionId) }));
+    setBoard((prev) => {
+      const removedConnection = prev.connections.find((connection) => connection.id === connectionId);
+      return {
+        ...prev,
+        people: removedConnection
+          ? prev.people.map((person) =>
+              person.id === removedConnection.sourcePersonId && person.managerId === removedConnection.targetPersonId
+                ? { ...person, managerId: '' }
+                : person
+            )
+          : prev.people,
+        connections: prev.connections.filter((connection) => connection.id !== connectionId),
+      };
+    });
     showToast('Conexión eliminada.', 'warning');
   };
 
@@ -4936,6 +5034,7 @@ export default function App() {
         isOpen={isBankDrawerOpen}
         onClose={() => setIsBankDrawerOpen(false)}
         people={bankDrawerPeople}
+        allPeople={board.people}
         totalCount={board.people.length}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -5229,6 +5328,22 @@ export default function App() {
                   placeholder="Ej: Coordinado por Christian"
                   className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500"
                 />
+              </label>
+
+              <label className="text-xs font-bold text-slate-400">
+                Supervisor Directo / Reporta a
+                <select
+                  value={personForm.managerId}
+                  onChange={(event) => setPersonForm({ ...personForm, managerId: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-indigo-500"
+                >
+                  <option value="">Sin supervisor</option>
+                  {board.people
+                    .filter((person) => person.id !== editingPersonId)
+                    .map((person) => (
+                      <option key={person.id} value={person.id}>{person.name}</option>
+                    ))}
+                </select>
               </label>
 
               <div>
