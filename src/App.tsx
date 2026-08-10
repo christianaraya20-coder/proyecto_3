@@ -129,6 +129,8 @@ interface ToastMessage {
 
 interface ConnectionLine {
   id: string;
+  sourcePersonId: string;
+  targetPersonId: string;
   x1: number;
   y1: number;
   x2: number;
@@ -473,8 +475,10 @@ function PersonCard({
   selected = false,
   connectionMode = false,
   readOnly = false,
+  highlighted = false,
   onOpen,
   onConnect,
+  onHover,
 }: {
   person: Person;
   searchQuery: string;
@@ -483,8 +487,10 @@ function PersonCard({
   selected?: boolean;
   connectionMode?: boolean;
   readOnly?: boolean;
+  highlighted?: boolean;
   onOpen: (person: Person) => void;
   onConnect: (person: Person) => void;
+  onHover?: (personId: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `person:${person.id}`,
@@ -499,10 +505,22 @@ function PersonCard({
       ref={setNodeRef}
       style={style}
       data-person-id={person.id}
-      onClick={() => onOpen(person)}
+      onClick={() => {
+        if (connectionMode && !readOnly) {
+          onConnect(person);
+          return;
+        }
+        onOpen(person);
+      }}
+      onMouseEnter={() => onHover?.(person.id)}
+      onMouseLeave={() => onHover?.(null)}
       className={`group rounded-xl border transition-all duration-200 ${dense ? 'p-2' : 'p-2.5'} ${
         selected
           ? 'border-amber-400 bg-amber-950/30 shadow-[0_0_16px_rgba(251,191,36,0.18)]'
+          : highlighted
+          ? 'border-cyan-400 bg-cyan-950/20 shadow-[0_0_18px_rgba(34,211,238,0.22)]'
+          : connectionMode && !readOnly
+          ? 'border-cyan-500/50 bg-slate-900/80 shadow-[0_0_12px_rgba(34,211,238,0.12)] hover:border-cyan-300'
           : 'border-slate-800 bg-slate-900/75 hover:border-slate-700 hover:bg-slate-900'
       } ${isDragging ? 'opacity-30' : 'opacity-100'} cursor-pointer`}
     >
@@ -562,9 +580,11 @@ function AssignmentCard({
   selected,
   connectionMode,
   readOnly = false,
+  highlighted = false,
   onOpen,
   onConnect,
   onRemoveAssignment,
+  onHover,
 }: {
   assignment: Assignment;
   person: Person;
@@ -574,9 +594,11 @@ function AssignmentCard({
   selected: boolean;
   connectionMode: boolean;
   readOnly?: boolean;
+  highlighted?: boolean;
   onOpen: (person: Person) => void;
   onConnect: (person: Person) => void;
   onRemoveAssignment: (assignmentId: string) => void;
+  onHover?: (personId: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `assignment:${assignment.id}`,
@@ -591,10 +613,22 @@ function AssignmentCard({
       ref={setNodeRef}
       style={style}
       data-person-id={person.id}
-      onClick={() => onOpen(person)}
+      onClick={() => {
+        if (connectionMode && !readOnly) {
+          onConnect(person);
+          return;
+        }
+        onOpen(person);
+      }}
+      onMouseEnter={() => onHover?.(person.id)}
+      onMouseLeave={() => onHover?.(null)}
       className={`group rounded-xl border transition-all duration-200 ${dense ? 'p-2' : 'p-2.5'} ${
         selected
           ? 'border-amber-400 bg-amber-950/30 shadow-[0_0_16px_rgba(251,191,36,0.18)]'
+          : highlighted
+          ? 'border-cyan-400 bg-cyan-950/20 shadow-[0_0_18px_rgba(34,211,238,0.22)]'
+          : connectionMode && !readOnly
+          ? 'border-cyan-500/50 bg-slate-900/80 shadow-[0_0_12px_rgba(34,211,238,0.12)] hover:border-cyan-300'
           : 'border-slate-800 bg-slate-900/70 hover:border-slate-700 hover:bg-slate-900'
       } ${isDragging ? 'opacity-30' : 'opacity-100'} cursor-pointer`}
     >
@@ -666,12 +700,14 @@ function EntityColumn({
   compact,
   fitMode,
   selectedConnectionPersonId,
+  hoveredPersonId,
   connectionMode,
   readOnly = false,
   canMoveLeft,
   canMoveRight,
   onOpenPerson,
   onConnect,
+  onHoverPerson,
   onEditEntity,
   onDeleteEntity,
   onRemoveAssignment,
@@ -684,12 +720,14 @@ function EntityColumn({
   compact: boolean;
   fitMode: boolean;
   selectedConnectionPersonId: string | null;
+  hoveredPersonId: string | null;
   connectionMode: boolean;
   readOnly?: boolean;
   canMoveLeft: boolean;
   canMoveRight: boolean;
   onOpenPerson: (person: Person) => void;
   onConnect: (person: Person) => void;
+  onHoverPerson: (personId: string | null) => void;
   onEditEntity: (entity: BoardEntity) => void;
   onDeleteEntity: (entity: BoardEntity) => void;
   onRemoveAssignment: (assignmentId: string) => void;
@@ -808,11 +846,13 @@ function EntityColumn({
                 compact={compact}
                 dense={fitMode}
                 selected={selectedConnectionPersonId === person.id}
+                highlighted={hoveredPersonId === person.id}
                 connectionMode={connectionMode}
                 readOnly={readOnly}
                 onOpen={onOpenPerson}
                 onConnect={onConnect}
                 onRemoveAssignment={onRemoveAssignment}
+                onHover={onHoverPerson}
               />
             );
           })
@@ -929,11 +969,13 @@ function BankPersonEntry({
   searchQuery,
   connectionMode,
   selectedConnectionPersonId,
+  hoveredPersonId,
   readOnly,
   entities,
   assignedEntityIds,
   onOpenPerson,
   onConnect,
+  onHoverPerson,
   onEditPerson,
   onDeletePerson,
   onAssign,
@@ -942,11 +984,13 @@ function BankPersonEntry({
   searchQuery: string;
   connectionMode: boolean;
   selectedConnectionPersonId: string | null;
+  hoveredPersonId: string | null;
   readOnly: boolean;
   entities: BoardEntity[];
   assignedEntityIds: Set<string>;
   onOpenPerson: (person: Person) => void;
   onConnect: (person: Person) => void;
+  onHoverPerson: (personId: string | null) => void;
   onEditPerson: (person: Person) => void;
   onDeletePerson: (personId: string) => void;
   onAssign: (personId: string, entityId: string) => void;
@@ -969,10 +1013,12 @@ function BankPersonEntry({
         person={person}
         searchQuery={searchQuery}
         selected={selectedConnectionPersonId === person.id}
+        highlighted={hoveredPersonId === person.id}
         connectionMode={connectionMode}
         readOnly={readOnly}
         onOpen={onOpenPerson}
         onConnect={onConnect}
+        onHover={onHoverPerson}
       />
       {!readOnly && (
         <div className="mt-1.5 flex items-center gap-1.5 px-0.5">
@@ -1037,11 +1083,13 @@ function BankDrawer({
   categoryOptions,
   connectionMode,
   selectedConnectionPersonId,
+  hoveredPersonId,
   readOnly,
   entities,
   assignments,
   onOpenPerson,
   onConnect,
+  onHoverPerson,
   onEditPerson,
   onDeletePerson,
   onAssignPerson,
@@ -1060,11 +1108,13 @@ function BankDrawer({
   categoryOptions: string[];
   connectionMode: boolean;
   selectedConnectionPersonId: string | null;
+  hoveredPersonId: string | null;
   readOnly: boolean;
   entities: BoardEntity[];
   assignments: Assignment[];
   onOpenPerson: (person: Person) => void;
   onConnect: (person: Person) => void;
+  onHoverPerson: (personId: string | null) => void;
   onEditPerson: (person: Person) => void;
   onDeletePerson: (personId: string) => void;
   onAssignPerson: (personId: string, entityId: string) => void;
@@ -1161,11 +1211,13 @@ function BankDrawer({
                   searchQuery={searchQuery}
                   connectionMode={connectionMode}
                   selectedConnectionPersonId={selectedConnectionPersonId}
+                  hoveredPersonId={hoveredPersonId}
                   readOnly={readOnly}
                   entities={entities}
                   assignedEntityIds={assignedEntityIds}
                   onOpenPerson={onOpenPerson}
                   onConnect={onConnect}
+                  onHoverPerson={onHoverPerson}
                   onEditPerson={onEditPerson}
                   onDeletePerson={onDeletePerson}
                   onAssign={onAssignPerson}
@@ -1198,6 +1250,8 @@ export default function App() {
   const [connectionMode, setConnectionMode] = useState(false);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
   const [selectedConnectionPersonId, setSelectedConnectionPersonId] = useState<string | null>(null);
+  const [hoveredPersonId, setHoveredPersonId] = useState<string | null>(null);
+  const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [activePersonId, setActivePersonId] = useState<string | null>(null);
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false);
@@ -1260,6 +1314,11 @@ export default function App() {
   const selectedPerson = useMemo(
     () => board.people.find((person) => person.id === selectedPersonId) || null,
     [board.people, selectedPersonId]
+  );
+
+  const selectedConnectionPerson = useMemo(
+    () => board.people.find((person) => person.id === selectedConnectionPersonId) || null,
+    [board.people, selectedConnectionPersonId]
   );
 
   const activePerson = useMemo(
@@ -1329,6 +1388,7 @@ export default function App() {
   }, [board]);
 
   const connectionColor = theme === 'light' ? '#0369a1' : '#38bdf8';
+  const connectionActiveColor = theme === 'light' ? '#0f172a' : '#67e8f9';
   const connectionTextColor = theme === 'light' ? '#0c4a6e' : '#bae6fd';
 
   const showToast = (message: string, type: ToastMessage['type'] = 'success') => {
@@ -1407,13 +1467,18 @@ export default function App() {
 
       const sourceRect = source.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
+      const sourceCenterX = sourceRect.left - containerRect.left + sourceRect.width / 2;
+      const targetCenterX = targetRect.left - containerRect.left + targetRect.width / 2;
+      const sourceIsLeft = sourceCenterX <= targetCenterX;
 
       return [
         {
           id: connection.id,
-          x1: sourceRect.right - containerRect.left,
+          sourcePersonId: connection.sourcePersonId,
+          targetPersonId: connection.targetPersonId,
+          x1: (sourceIsLeft ? sourceRect.right : sourceRect.left) - containerRect.left,
           y1: sourceRect.top - containerRect.top + sourceRect.height / 2,
-          x2: targetRect.left - containerRect.left,
+          x2: (sourceIsLeft ? targetRect.left : targetRect.right) - containerRect.left,
           y2: targetRect.top - containerRect.top + targetRect.height / 2,
           label: connection.label,
         },
@@ -1767,16 +1832,14 @@ export default function App() {
     const source = board.people.find((candidate) => candidate.id === selectedConnectionPersonId);
     if (!source) return;
 
-    const label = window.prompt(`Describe la relación entre ${source.name} y ${person.name}:`, 'Reporta avances');
-    if (!label) return;
-
-    const alreadyExists = board.connections.some(
+    const alreadyExists = board.connections.find(
       (connection) => connection.sourcePersonId === source.id && connection.targetPersonId === person.id
     );
 
     if (alreadyExists) {
-      showToast('Esa conexión ya existe.', 'info');
+      setBoard((prev) => ({ ...prev, connections: prev.connections.filter((connection) => connection.id !== alreadyExists.id) }));
       setSelectedConnectionPersonId(null);
+      showToast(`Conexión removida: ${source.name} → ${person.name}.`, 'warning');
       return;
     }
 
@@ -1784,7 +1847,7 @@ export default function App() {
       ...prev,
       connections: [
         ...prev.connections,
-        { id: createId('conn'), sourcePersonId: source.id, targetPersonId: person.id, label: label.trim() },
+        { id: createId('conn'), sourcePersonId: source.id, targetPersonId: person.id, label: 'Reporta a' },
       ],
     }));
     setSelectedConnectionPersonId(null);
@@ -2099,6 +2162,14 @@ export default function App() {
           <strong className="text-slate-200">Estructura jerárquica:</strong> la Cúpula Directiva queda fija arriba; debajo, cada nivel (Empresas → Proyectos → Licitaciones → Tareas) tiene su propia fila a todo el ancho. Abre "Banco de Personas" en el header para buscar, editar o asignar directamente a cualquier entidad, reordena columnas dentro de su fila y colapsa niveles con la flecha para enfocar la vista.
         </div>
 
+        {connectionMode && (
+          <div className="mb-4 rounded-2xl border border-cyan-400/50 bg-cyan-950/30 p-3 text-xs font-semibold text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.16)]">
+            {selectedConnectionPerson
+              ? `Selecciona a quien reporta ${selectedConnectionPerson.name}. Haz clic en la misma persona para cancelar.`
+              : 'Modo Conexion activo: haz clic en una tarjeta para elegir el origen de la relacion.'}
+          </div>
+        )}
+
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div ref={boardContentRef} className="relative flex flex-col gap-5 pb-5">
             <svg
@@ -2109,24 +2180,51 @@ export default function App() {
                 <marker id="arrow-head" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
                   <path d="M 0 0 L 8 4 L 0 8 z" fill={connectionColor} />
                 </marker>
+                <marker id="arrow-head-active" markerHeight="9" markerWidth="9" orient="auto" refX="8" refY="4.5">
+                  <path d="M 0 0 L 9 4.5 L 0 9 z" fill={connectionActiveColor} />
+                </marker>
               </defs>
               {connectionLines.map((line) => {
                 const midX = (line.x1 + line.x2) / 2;
                 const midY = (line.y1 + line.y2) / 2;
                 const curve = Math.max(80, Math.abs(line.x2 - line.x1) / 2);
+                const pathD = `M ${line.x1} ${line.y1} C ${line.x1 + curve} ${line.y1}, ${line.x2 - curve} ${line.y2}, ${line.x2} ${line.y2}`;
+                const isActive =
+                  hoveredConnectionId === line.id ||
+                  hoveredPersonId === line.sourcePersonId ||
+                  hoveredPersonId === line.targetPersonId ||
+                  selectedConnectionPersonId === line.sourcePersonId ||
+                  selectedConnectionPersonId === line.targetPersonId;
 
                 return (
-                  <g key={line.id}>
+                  <g
+                    key={line.id}
+                    className={connectionMode ? 'pointer-events-auto cursor-pointer' : 'pointer-events-auto'}
+                    onMouseEnter={() => setHoveredConnectionId(line.id)}
+                    onMouseLeave={() => setHoveredConnectionId(null)}
+                    onClick={(event) => {
+                      if (!connectionMode || isPresentationMode) return;
+                      event.stopPropagation();
+                      handleRemoveConnection(line.id);
+                    }}
+                  >
                     <path
-                      d={`M ${line.x1} ${line.y1} C ${line.x1 + curve} ${line.y1}, ${line.x2 - curve} ${line.y2}, ${line.x2} ${line.y2}`}
+                      d={pathD}
                       fill="none"
-                      markerEnd="url(#arrow-head)"
-                      stroke={connectionColor}
-                      strokeDasharray="7 7"
+                      stroke="transparent"
                       strokeLinecap="round"
-                      strokeWidth="2"
+                      strokeWidth="18"
                     />
-                    <text x={midX} y={midY - 8} fill={connectionTextColor} fontSize="11" fontWeight="700" textAnchor="middle">
+                    <path
+                      d={pathD}
+                      fill="none"
+                      markerEnd={isActive ? 'url(#arrow-head-active)' : 'url(#arrow-head)'}
+                      stroke={isActive ? connectionActiveColor : connectionColor}
+                      strokeDasharray={isActive ? '0' : '7 7'}
+                      strokeLinecap="round"
+                      strokeWidth={isActive ? '4' : '2.5'}
+                    />
+                    <text x={midX} y={midY - 8} fill={isActive ? connectionActiveColor : connectionTextColor} fontSize="11" fontWeight="700" textAnchor="middle">
                       {line.label}
                     </text>
                   </g>
@@ -2191,12 +2289,14 @@ export default function App() {
                                   compact={compactMode}
                                   fitMode={fitToScreen}
                                   selectedConnectionPersonId={selectedConnectionPersonId}
+                                  hoveredPersonId={hoveredPersonId}
                                   connectionMode={connectionMode}
                                   readOnly={isPresentationMode}
                                   canMoveLeft={entityIndex > 0}
                                   canMoveRight={entityIndex < levelEntities.length - 1}
                                   onOpenPerson={(person) => setSelectedPersonId(person.id)}
                                   onConnect={handleConnectPerson}
+                                  onHoverPerson={setHoveredPersonId}
                                   onEditEntity={openEditEntityModal}
                                   onDeleteEntity={(entityToDelete) => handleDeleteEntity(entityToDelete.id)}
                                   onRemoveAssignment={handleRemoveAssignment}
@@ -2241,11 +2341,13 @@ export default function App() {
         categoryOptions={bankCategoryOptions}
         connectionMode={connectionMode}
         selectedConnectionPersonId={selectedConnectionPersonId}
+        hoveredPersonId={hoveredPersonId}
         readOnly={isPresentationMode}
         entities={orderedEntities}
         assignments={board.assignments}
         onOpenPerson={(person) => setSelectedPersonId(person.id)}
         onConnect={handleConnectPerson}
+        onHoverPerson={setHoveredPersonId}
         onEditPerson={openEditPersonModal}
         onDeletePerson={handleDeletePerson}
         onAssignPerson={handleAssignPersonToEntity}
@@ -2368,6 +2470,13 @@ export default function App() {
                   ))
                 )}
               </div>
+            </section>
+
+            <section>
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Conexiones activas</h3>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                En Modo Conexion tambien puedes hacer clic sobre una linea del tablero para eliminarla.
+              </p>
             </section>
 
             <section>
