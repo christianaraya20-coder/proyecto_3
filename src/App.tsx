@@ -79,6 +79,7 @@ type RoleType =
 type EntityType = 'empresa' | 'proyecto' | 'licitacion' | 'tarea';
 type ThemeMode = 'dark' | 'light';
 type CommitmentStatus = 'Pendiente' | 'En Progreso' | 'Completado' | 'Riesgo';
+type LicitationWorkflowStatus = 'Cotizando' | 'Preguntas Enviadas' | 'En Elaboracion' | 'Presentada' | 'Desestimada';
 
 type TagColorKey = 'slate' | 'red' | 'orange' | 'amber' | 'emerald' | 'cyan' | 'blue' | 'violet' | 'pink';
 
@@ -132,6 +133,9 @@ interface BoardEntity {
   budgetUsd?: string;
   closeDate?: string;
   status?: string;
+  questionDueDate?: string;
+  leaderPersonId?: string;
+  workflowStatus?: LicitationWorkflowStatus;
   positions?: Position[];
   // Calendar/commitment tracking — startDate/dueDate feed the Calendario modal,
   // commitmentStatus is the coarse enum shown as a badge (distinct from the
@@ -351,9 +355,20 @@ function toggleTaskDoneMarker(task: string) {
 const SUGGESTED_TAGS = ['RRHH', 'Licitaciones', 'ITO', 'Dirección', 'Legal', 'Finanzas', 'Tecnología', 'Logística'];
 
 const COMMITMENT_STATUS_OPTIONS: CommitmentStatus[] = ['Pendiente', 'En Progreso', 'Completado', 'Riesgo'];
+const LICITATION_WORKFLOW_STATUS_OPTIONS: LicitationWorkflowStatus[] = [
+  'Cotizando',
+  'Preguntas Enviadas',
+  'En Elaboracion',
+  'Presentada',
+  'Desestimada',
+];
 
 function isCommitmentStatus(value: unknown): value is CommitmentStatus {
   return typeof value === 'string' && (COMMITMENT_STATUS_OPTIONS as string[]).includes(value);
+}
+
+function isLicitationWorkflowStatus(value: unknown): value is LicitationWorkflowStatus {
+  return typeof value === 'string' && (LICITATION_WORKFLOW_STATUS_OPTIONS as string[]).includes(value);
 }
 
 // Parses a "DD/MM/YYYY" string (the format used across the July licitación
@@ -406,6 +421,18 @@ const URGENCY_TONE_STYLES: Record<DueUrgency['tone'], string> = {
   green: 'border-emerald-400/60 bg-emerald-500/15 text-emerald-200',
   slate: 'border-slate-600 bg-slate-800/60 text-slate-300',
 };
+
+const LICITATION_WORKFLOW_STYLES: Record<LicitationWorkflowStatus, string> = {
+  Cotizando: 'border-sky-500/50 bg-sky-500/15 text-sky-200',
+  'Preguntas Enviadas': 'border-violet-500/50 bg-violet-500/15 text-violet-200',
+  'En Elaboracion': 'border-amber-500/50 bg-amber-500/15 text-amber-100',
+  Presentada: 'border-emerald-500/50 bg-emerald-500/15 text-emerald-200',
+  Desestimada: 'border-slate-600 bg-slate-800/70 text-slate-300',
+};
+
+function getLicitationWorkflowStyle(status: LicitationWorkflowStatus | undefined) {
+  return LICITATION_WORKFLOW_STYLES[status || 'Cotizando'];
+}
 
 function DueDateBadge({ dueDate, commitmentStatus }: { dueDate: string; commitmentStatus?: CommitmentStatus }) {
   const urgency = getDueUrgency(dueDate, commitmentStatus);
@@ -665,21 +692,24 @@ function normalizePosition(position: Partial<Position> & { id?: string }): Posit
 // them so older stored/imported states keep working without losing data.
 function normalizeBoardState(state: BoardState): BoardState {
   const persistedOrder = Array.isArray(state.entitiesOrder) ? state.entitiesOrder : [];
-  const replacedLicitacionIds = new Set(['entity-ejercito', ...JULY_LICITATION_IDS]);
+  const shouldInjectJulyLicitations = state.entities.some((entity) => entity.id === 'entity-ejercito');
+  const replacedLicitacionIds = new Set(['entity-ejercito', ...(shouldInjectJulyLicitations ? JULY_LICITATION_IDS : [])]);
   const rawEntities = [
     ...state.entities.filter((entity) => !replacedLicitacionIds.has(entity.id)),
-    ...JULY_LICITATION_ENTITIES,
+    ...(shouldInjectJulyLicitations ? JULY_LICITATION_ENTITIES : []),
   ];
   const existingEntityIds = new Set(rawEntities.map((entity) => entity.id));
   const orderWithoutReplacedLicitaciones = [
     ...(persistedOrder.length > 0 ? persistedOrder : state.entities.map((entity) => entity.id)),
   ].filter((entityId) => !replacedLicitacionIds.has(entityId) && existingEntityIds.has(entityId));
   const taskIndex = orderWithoutReplacedLicitaciones.indexOf('entity-nomina');
-  const normalizedOrder = [
-    ...(taskIndex >= 0 ? orderWithoutReplacedLicitaciones.slice(0, taskIndex) : orderWithoutReplacedLicitaciones),
-    ...JULY_LICITATION_IDS,
-    ...(taskIndex >= 0 ? orderWithoutReplacedLicitaciones.slice(taskIndex) : []),
-  ];
+  const normalizedOrder = shouldInjectJulyLicitations
+    ? [
+        ...(taskIndex >= 0 ? orderWithoutReplacedLicitaciones.slice(0, taskIndex) : orderWithoutReplacedLicitaciones),
+        ...JULY_LICITATION_IDS,
+        ...(taskIndex >= 0 ? orderWithoutReplacedLicitaciones.slice(taskIndex) : []),
+      ]
+    : orderWithoutReplacedLicitaciones;
 
   const rawPeople = state.people.map(normalizePerson);
   const peopleIds = new Set(rawPeople.map((person) => person.id));
@@ -699,6 +729,14 @@ function normalizeBoardState(state: BoardState): BoardState {
   const entities = rawEntities.map((entity) => ({
     ...entity,
     commitmentStatus: isCommitmentStatus(entity.commitmentStatus) ? entity.commitmentStatus : undefined,
+    questionDueDate: typeof entity.questionDueDate === 'string' && entity.questionDueDate ? entity.questionDueDate : undefined,
+    leaderPersonId: typeof entity.leaderPersonId === 'string' && peopleIds.has(entity.leaderPersonId) ? entity.leaderPersonId : undefined,
+    workflowStatus:
+      entity.type === 'licitacion'
+        ? isLicitationWorkflowStatus(entity.workflowStatus)
+          ? entity.workflowStatus
+          : 'Cotizando'
+        : undefined,
     positions: (Array.isArray(entity.positions) ? entity.positions : [])
       .map(normalizePosition)
       // A position whose assigned person no longer exists (e.g. deleted from
@@ -1291,11 +1329,15 @@ function AssignmentCard({
   );
 }
 
-function LicitationEntitySummary({ entity }: { entity: BoardEntity }) {
+function LicitationEntitySummary({ entity, leader }: { entity: BoardEntity; leader?: Person }) {
   if (entity.type !== 'licitacion') return null;
+  const workflowStatus = entity.workflowStatus || 'Cotizando';
 
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
+      <span className={`rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${getLicitationWorkflowStyle(workflowStatus)}`}>
+        {workflowStatus}
+      </span>
       {entity.code && (
         <span className="rounded-md border border-white/25 bg-slate-950/40 px-2 py-0.5 text-[10px] font-extrabold text-white">
           ID {entity.code}
@@ -1309,6 +1351,21 @@ function LicitationEntitySummary({ entity }: { entity: BoardEntity }) {
       {entity.budgetUsd && (
         <span className="rounded-md border border-emerald-200/50 bg-emerald-950/45 px-2 py-0.5 text-[10px] font-extrabold text-emerald-100">
           {entity.budgetUsd}
+        </span>
+      )}
+      {entity.questionDueDate && (
+        <span className="rounded-md border border-cyan-200/40 bg-cyan-950/40 px-2 py-0.5 text-[10px] font-extrabold text-cyan-100">
+          Preguntas {entity.questionDueDate}
+        </span>
+      )}
+      {entity.closeDate && (
+        <span className="rounded-md border border-amber-200/40 bg-amber-950/40 px-2 py-0.5 text-[10px] font-extrabold text-amber-100">
+          Cierre {entity.closeDate}
+        </span>
+      )}
+      {leader && (
+        <span className="rounded-md border border-indigo-200/40 bg-indigo-950/40 px-2 py-0.5 text-[10px] font-extrabold text-indigo-100">
+          Lider {leader.name}
         </span>
       )}
     </div>
@@ -1676,6 +1733,9 @@ function EntityColumn({
   onRemovePositionTask,
   onToggleBadges,
   onOpenSummary,
+  onDismissLicitation,
+  onUpdateLicitationLeader,
+  onUpdateLicitationWorkflowStatus,
 }: {
   entity: BoardEntity;
   assignments: Assignment[];
@@ -1709,6 +1769,9 @@ function EntityColumn({
   onRemovePositionTask: (entityId: string, positionId: string, taskIndex: number) => void;
   onToggleBadges: (personId: string) => void;
   onOpenSummary: (personId: string) => void;
+  onDismissLicitation: (entity: BoardEntity) => void;
+  onUpdateLicitationLeader: (entityId: string, leaderPersonId: string) => void;
+  onUpdateLicitationWorkflowStatus: (entityId: string, workflowStatus: LicitationWorkflowStatus) => void;
 }) {
   const positions = entity.positions || [];
   const positionedPersonIds = new Set(
@@ -1735,6 +1798,7 @@ function EntityColumn({
   });
   const meta = ENTITY_META[entity.type];
   const Icon = meta.icon;
+  const licitationLeader = entity.leaderPersonId ? people.find((person) => person.id === entity.leaderPersonId) : undefined;
   const columnStyle = columnTransform ? { transform: CSS.Transform.toString(columnTransform) } : undefined;
   const moveAssignment = (assignmentId: string, direction: 'up' | 'down') => {
     const currentIndex = quickAssignments.findIndex((assignment) => assignment.id === assignmentId);
@@ -1771,7 +1835,7 @@ function EntityColumn({
               {meta.label}
             </span>
             <h3 className={`mt-2 break-words font-display font-extrabold leading-tight text-white ${fitMode ? 'text-sm' : 'text-lg'}`}>{entity.name}</h3>
-            <LicitationEntitySummary entity={entity} />
+            <LicitationEntitySummary entity={entity} leader={licitationLeader} />
             {entity.dueDate && (
               <div className="mt-1.5">
                 <DueDateBadge dueDate={entity.dueDate} commitmentStatus={entity.commitmentStatus} />
@@ -1834,6 +1898,45 @@ function EntityColumn({
       </header>
 
       <div className={`overflow-visible ${fitMode ? 'space-y-1.5 p-2' : 'space-y-2 p-2.5'}`}>
+        {entity.type === 'licitacion' && !readOnly && (
+          <div className="grid gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-2">
+            <div className="grid gap-2">
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-amber-200">
+                Lider de licitacion
+                <select
+                  value={entity.leaderPersonId || ''}
+                  onChange={(event) => onUpdateLicitationLeader(entity.id, event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs font-semibold text-slate-100 outline-none focus:border-amber-500"
+                >
+                  <option value="">Sin lider</option>
+                  {people.map((person) => (
+                    <option key={person.id} value={person.id}>{person.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-amber-200">
+                Estado de avance
+                <select
+                  value={entity.workflowStatus || 'Cotizando'}
+                  onChange={(event) => onUpdateLicitationWorkflowStatus(entity.id, event.target.value as LicitationWorkflowStatus)}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs font-semibold text-slate-100 outline-none focus:border-amber-500"
+                >
+                  {LICITATION_WORKFLOW_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <button
+              type="button"
+              onClick={() => onDismissLicitation(entity)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-2 py-1.5 text-[10px] font-bold text-red-200 transition-colors hover:bg-red-500/20"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Desestimar / Borrar
+            </button>
+          </div>
+        )}
         <div className={fitMode ? 'pb-1' : 'pb-1.5'}>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Puestos ({positions.length})</span>
@@ -3204,7 +3307,10 @@ interface CalendarEvent {
   entity: BoardEntity;
   personIds: string[];
   commitmentStatus?: CommitmentStatus;
+  leaderPersonId?: string;
+  workflowStatus?: LicitationWorkflowStatus;
   kind: 'entity' | 'position';
+  milestone: 'preguntas' | 'cierre' | 'posicion';
 }
 
 // Agenda/calendar view of every dated commitment on the board: entity-level
@@ -3216,12 +3322,20 @@ function CalendarModal({
   entities,
   people,
   assignments,
+  onOpenNewLicitation,
+  onDismissLicitation,
+  onUpdateLicitationLeader,
+  onUpdateLicitationWorkflowStatus,
 }: {
   isOpen: boolean;
   onClose: () => void;
   entities: BoardEntity[];
   people: Person[];
   assignments: Assignment[];
+  onOpenNewLicitation: () => void;
+  onDismissLicitation: (entity: BoardEntity) => void;
+  onUpdateLicitationLeader: (entityId: string, leaderPersonId: string) => void;
+  onUpdateLicitationWorkflowStatus: (entityId: string, workflowStatus: LicitationWorkflowStatus) => void;
 }) {
   const [personFilter, setPersonFilter] = useState('todas');
   const [entityFilter, setEntityFilter] = useState('todas');
@@ -3249,15 +3363,35 @@ function CalendarModal({
         ...positions.map((position) => position.assignedPersonId).filter((personId): personId is string => Boolean(personId)),
       ]);
 
+      if (entity.type === 'licitacion' && entity.questionDueDate) {
+        const leaderPersonIds = entity.leaderPersonId ? [entity.leaderPersonId] : [];
+        list.push({
+          id: `licitacion-preguntas-${entity.id}`,
+          date: entity.questionDueDate,
+          title: `Cierre preguntas: ${entity.name}`,
+          entity,
+          personIds: Array.from(new Set([...leaderPersonIds, ...entityPersonIds])),
+          commitmentStatus: entity.commitmentStatus,
+          leaderPersonId: entity.leaderPersonId,
+          workflowStatus: entity.workflowStatus || 'Cotizando',
+          kind: 'entity',
+          milestone: 'preguntas',
+        });
+      }
+
       if (entity.dueDate) {
+        const leaderPersonIds = entity.type === 'licitacion' && entity.leaderPersonId ? [entity.leaderPersonId] : [];
         list.push({
           id: `entity-${entity.id}`,
           date: entity.dueDate,
-          title: entity.type === 'licitacion' ? `Cierre de licitación: ${entity.name}` : `Vencimiento: ${entity.name}`,
+          title: entity.type === 'licitacion' ? `Cierre oferta: ${entity.name}` : `Vencimiento: ${entity.name}`,
           entity,
-          personIds: Array.from(entityPersonIds),
+          personIds: Array.from(new Set([...leaderPersonIds, ...entityPersonIds])),
           commitmentStatus: entity.commitmentStatus,
+          leaderPersonId: entity.type === 'licitacion' ? entity.leaderPersonId : undefined,
+          workflowStatus: entity.type === 'licitacion' ? entity.workflowStatus || 'Cotizando' : undefined,
           kind: 'entity',
+          milestone: 'cierre',
         });
       }
 
@@ -3271,6 +3405,7 @@ function CalendarModal({
           personIds: position.assignedPersonId ? [position.assignedPersonId] : [],
           commitmentStatus: position.commitmentStatus,
           kind: 'position',
+          milestone: 'posicion',
         });
       });
     });
@@ -3332,6 +3467,14 @@ function CalendarModal({
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2 border-b border-slate-800 p-4">
+          <button
+            type="button"
+            onClick={onOpenNewLicitation}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-xs font-bold text-amber-100 transition-colors hover:bg-amber-500/25"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Nueva Licitacion
+          </button>
           <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">
             Persona
             <select
@@ -3373,6 +3516,8 @@ function CalendarModal({
                   {monthEvents.map((event) => {
                     const urgency = getDueUrgency(event.date, event.commitmentStatus);
                     const meta = ENTITY_META[event.entity.type];
+                    const isLicitationEvent = event.entity.type === 'licitacion' && event.kind === 'entity';
+                    const leader = event.leaderPersonId ? peopleById.get(event.leaderPersonId) : undefined;
                     const relatedPeople = event.personIds
                       .map((personId) => peopleById.get(personId))
                       .filter((person): person is Person => Boolean(person));
@@ -3391,6 +3536,64 @@ function CalendarModal({
                           </span>
                         </div>
                         <p className="mt-2 break-words text-sm font-bold text-slate-100">{event.title}</p>
+                        {isLicitationEvent && (
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            {event.entity.code && (
+                              <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[9px] font-bold text-slate-300">
+                                ID {event.entity.code}
+                              </span>
+                            )}
+                            {event.workflowStatus && (
+                              <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${getLicitationWorkflowStyle(event.workflowStatus)}`}>
+                                {event.workflowStatus}
+                              </span>
+                            )}
+                            {leader && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold text-indigo-200">
+                                <User className="h-3 w-3" />
+                                Lider: {leader.name}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {isLicitationEvent && (
+                          <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                            <label className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1 text-[10px] font-bold text-slate-400">
+                              Lider
+                              <select
+                                value={event.leaderPersonId || ''}
+                                onChange={(changeEvent) => onUpdateLicitationLeader(event.entity.id, changeEvent.target.value)}
+                                className="mt-1 w-full bg-transparent text-xs font-semibold text-slate-100 outline-none"
+                              >
+                                <option value="" className="bg-slate-950">Sin lider</option>
+                                {people.map((person) => (
+                                  <option key={person.id} value={person.id} className="bg-slate-950">{person.name}</option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1 text-[10px] font-bold text-slate-400">
+                              Estado
+                              <select
+                                value={event.workflowStatus || 'Cotizando'}
+                                onChange={(changeEvent) => onUpdateLicitationWorkflowStatus(event.entity.id, changeEvent.target.value as LicitationWorkflowStatus)}
+                                className="mt-1 w-full bg-transparent text-xs font-semibold text-slate-100 outline-none"
+                              >
+                                {LICITATION_WORKFLOW_STATUS_OPTIONS.map((status) => (
+                                  <option key={status} value={status} className="bg-slate-950">{status}</option>
+                                ))}
+                              </select>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => onDismissLicitation(event.entity)}
+                              className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-500/40 bg-red-500/10 px-2 py-2 text-[10px] font-bold text-red-200 transition-colors hover:bg-red-500/20"
+                              title="Desestimar o borrar licitacion"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Borrar
+                            </button>
+                          </div>
+                        )}
                         <p className="mt-0.5 text-[11px] text-slate-500">{meta.label} · {event.entity.name}</p>
                         {relatedPeople.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -3641,6 +3844,17 @@ export default function App() {
     startDate: '',
     dueDate: '',
     commitmentStatus: '' as CommitmentStatus | '',
+  });
+  const [isQuickLicitationModalOpen, setIsQuickLicitationModalOpen] = useState(false);
+  const [quickLicitationForm, setQuickLicitationForm] = useState({
+    code: '',
+    client: '',
+    name: '',
+    questionDueDate: '',
+    dueDate: '',
+    budgetUsd: '',
+    leaderPersonId: '',
+    workflowStatus: 'Cotizando' as LicitationWorkflowStatus,
   });
 
   const [holdingForm, setHoldingForm] = useState({
@@ -4071,6 +4285,20 @@ export default function App() {
     setIsEntityModalOpen(true);
   };
 
+  const openQuickLicitationModal = () => {
+    setQuickLicitationForm({
+      code: '',
+      client: '',
+      name: '',
+      questionDueDate: '',
+      dueDate: '',
+      budgetUsd: '',
+      leaderPersonId: '',
+      workflowStatus: 'Cotizando',
+    });
+    setIsQuickLicitationModalOpen(true);
+  };
+
   const openEditEntityModal = (entity: BoardEntity) => {
     setEditingEntityId(entity.id);
     setEntityForm({
@@ -4127,6 +4355,127 @@ export default function App() {
     setEntityForm({ name: '', type: 'empresa', description: '', startDate: '', dueDate: '', commitmentStatus: '' });
     setIsEntityModalOpen(false);
     showToast(`${entity.name} creado como ${ENTITY_META[entity.type].label}.`, 'success');
+  };
+
+  const handleSaveQuickLicitation = (event: React.FormEvent) => {
+    event.preventDefault();
+    const cleanName = quickLicitationForm.name.trim();
+    if (!cleanName) return;
+
+    const cleanCode = quickLicitationForm.code.trim();
+    const cleanClient = quickLicitationForm.client.trim();
+    const cleanBudget = quickLicitationForm.budgetUsd.trim();
+    const workflowStatus = quickLicitationForm.workflowStatus;
+    const entityName = [cleanCode ? `[${cleanCode}]` : '', cleanName, cleanClient ? `- ${cleanClient}` : '']
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    const descriptionParts = [
+      cleanBudget ? `Presupuesto: ${cleanBudget}` : '',
+      quickLicitationForm.questionDueDate ? `Preguntas: ${quickLicitationForm.questionDueDate}` : '',
+      quickLicitationForm.dueDate ? `Cierre: ${quickLicitationForm.dueDate}` : '',
+      `Estado: ${workflowStatus}`,
+    ].filter(Boolean);
+    const entity: BoardEntity = {
+      id: createId('lic'),
+      type: 'licitacion',
+      code: cleanCode || undefined,
+      client: cleanClient || undefined,
+      name: entityName,
+      description: descriptionParts.join(' | ') || 'Licitacion creada desde alta rapida.',
+      budgetUsd: cleanBudget || undefined,
+      questionDueDate: quickLicitationForm.questionDueDate || undefined,
+      closeDate: quickLicitationForm.dueDate || undefined,
+      dueDate: quickLicitationForm.dueDate || undefined,
+      status: workflowStatus,
+      workflowStatus,
+      commitmentStatus: 'Pendiente',
+      leaderPersonId: quickLicitationForm.leaderPersonId || undefined,
+      positions: [],
+    };
+
+    setBoard((prev) => ({
+      ...prev,
+      entities: [...prev.entities, entity],
+      entitiesOrder: [...prev.entitiesOrder, entity.id],
+      assignments: quickLicitationForm.leaderPersonId
+        ? [
+            ...prev.assignments,
+            {
+              id: createId('assign'),
+              personId: quickLicitationForm.leaderPersonId,
+              entityId: entity.id,
+              taskText: 'Liderar licitacion',
+            },
+          ]
+        : prev.assignments,
+    }));
+    setIsQuickLicitationModalOpen(false);
+    showToast(`${entity.name} agregada al nivel Licitaciones.`, 'success');
+  };
+
+  const handleDismissLicitation = (entity: BoardEntity) => {
+    if (entity.type !== 'licitacion') return;
+
+    const label = entity.code || entity.name;
+    if (!window.confirm(`Desestimar licitacion ${label}? Se quitara del tablero y del calendario.`)) return;
+
+    setBoard((prev) => ({
+      ...prev,
+      entities: prev.entities.filter((candidate) => candidate.id !== entity.id),
+      entitiesOrder: prev.entitiesOrder.filter((candidateId) => candidateId !== entity.id),
+      assignments: prev.assignments.filter((assignment) => assignment.entityId !== entity.id),
+    }));
+    showToast(`Licitacion ${label} desestimada.`, 'warning');
+  };
+
+  const handleUpdateLicitationLeader = (entityId: string, leaderPersonId: string) => {
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    if (!entity || entity.type !== 'licitacion') return;
+    const leader = leaderPersonId ? board.people.find((person) => person.id === leaderPersonId) : null;
+
+    setBoard((prev) => {
+      const previousLeaderId = prev.entities.find((candidate) => candidate.id === entityId)?.leaderPersonId;
+      const cleanedAssignments = prev.assignments.filter(
+        (assignment) =>
+          !(
+            previousLeaderId &&
+            assignment.entityId === entityId &&
+            assignment.personId === previousLeaderId &&
+            assignment.taskText === 'Liderar licitacion'
+          )
+      );
+      const alreadyAssigned = leaderPersonId
+        ? cleanedAssignments.some((assignment) => assignment.entityId === entityId && assignment.personId === leaderPersonId)
+        : true;
+
+      return {
+        ...prev,
+        entities: prev.entities.map((candidate) =>
+          candidate.id === entityId ? { ...candidate, leaderPersonId: leaderPersonId || undefined } : candidate
+        ),
+        assignments:
+          leaderPersonId && !alreadyAssigned
+            ? [
+                ...cleanedAssignments,
+                { id: createId('assign'), personId: leaderPersonId, entityId, taskText: 'Liderar licitacion' },
+              ]
+            : cleanedAssignments,
+      };
+    });
+    showToast(leader ? `${leader.name} asignado como lider de ${entity.name}.` : `Lider liberado en ${entity.name}.`, 'success');
+  };
+
+  const handleUpdateLicitationWorkflowStatus = (entityId: string, workflowStatus: LicitationWorkflowStatus) => {
+    setBoard((prev) => ({
+      ...prev,
+      entities: prev.entities.map((entity) =>
+        entity.id === entityId && entity.type === 'licitacion'
+          ? { ...entity, workflowStatus, status: workflowStatus }
+          : entity
+      ),
+    }));
+    showToast(`Estado de licitacion actualizado: ${workflowStatus}.`, 'success');
   };
 
   const handleDeletePerson = (personId: string) => {
@@ -5264,14 +5613,26 @@ export default function App() {
                         {levelEntities.length}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleLevelCollapsed(levelType)}
-                      className="shrink-0 rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200"
-                      title={isCollapsed ? `Expandir ${levelMeta.noun}` : `Colapsar ${levelMeta.noun}`}
-                    >
-                      {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                    </button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {levelType === 'licitacion' && !isPresentationMode && (
+                        <button
+                          type="button"
+                          onClick={openQuickLicitationModal}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1.5 text-[10px] font-bold text-amber-100 transition-colors hover:bg-amber-500/25"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Licitacion
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => toggleLevelCollapsed(levelType)}
+                        className="rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200"
+                        title={isCollapsed ? `Expandir ${levelMeta.noun}` : `Colapsar ${levelMeta.noun}`}
+                      >
+                        {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </header>
 
                   {!isCollapsed && (
@@ -5322,6 +5683,9 @@ export default function App() {
                                   onRemovePositionTask={handleRemovePositionTask}
                                   onToggleBadges={handleTogglePersonBadges}
                                   onOpenSummary={openTaskSummary}
+                                  onDismissLicitation={handleDismissLicitation}
+                                  onUpdateLicitationLeader={handleUpdateLicitationLeader}
+                                  onUpdateLicitationWorkflowStatus={handleUpdateLicitationWorkflowStatus}
                                 />
                               </div>
                             );
@@ -5418,6 +5782,10 @@ export default function App() {
         entities={orderedEntities}
         people={board.people}
         assignments={board.assignments}
+        onOpenNewLicitation={openQuickLicitationModal}
+        onDismissLicitation={handleDismissLicitation}
+        onUpdateLicitationLeader={handleUpdateLicitationLeader}
+        onUpdateLicitationWorkflowStatus={handleUpdateLicitationWorkflowStatus}
       />
 
       <HistoryModal
@@ -5893,6 +6261,131 @@ export default function App() {
               </button>
               <button type="submit" className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500">
                 {editingEntityId ? 'Guardar cambios' : 'Crear entidad'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {isQuickLicitationModalOpen && (
+        <div className="fixed inset-0 z-[105] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <form onSubmit={handleSaveQuickLicitation} className="w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200">
+                  <Gavel className="h-3 w-3" />
+                  Alta rapida
+                </span>
+                <h2 className="mt-2 font-display text-lg font-extrabold text-white">Nueva Licitacion</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsQuickLicitationModalOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid gap-4">
+              <div className="grid gap-3 sm:grid-cols-[150px_1fr]">
+                <label className="text-xs font-bold text-slate-400">
+                  Codigo ID / LicSP
+                  <input
+                    value={quickLicitationForm.code}
+                    onChange={(event) => setQuickLicitationForm({ ...quickLicitationForm, code: event.target.value })}
+                    placeholder="17-2026"
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                  />
+                </label>
+                <label className="text-xs font-bold text-slate-400">
+                  Cliente / Entidad
+                  <input
+                    value={quickLicitationForm.client}
+                    onChange={(event) => setQuickLicitationForm({ ...quickLicitationForm, client: event.target.value })}
+                    placeholder="Ejercito, Carabineros, Municipalidad"
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                  />
+                </label>
+              </div>
+              <label className="text-xs font-bold text-slate-400">
+                Nombre de la Licitacion
+                <input
+                  required
+                  value={quickLicitationForm.name}
+                  onChange={(event) => setQuickLicitationForm({ ...quickLicitationForm, name: event.target.value })}
+                  placeholder="Ambulancias de Combate"
+                  className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-bold text-slate-400">
+                  Cierre de Preguntas
+                  <input
+                    type="date"
+                    value={quickLicitationForm.questionDueDate}
+                    onChange={(event) => setQuickLicitationForm({ ...quickLicitationForm, questionDueDate: event.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                  />
+                </label>
+                <label className="text-xs font-bold text-slate-400">
+                  Entrega / Cierre Oferta
+                  <input
+                    type="date"
+                    value={quickLicitationForm.dueDate}
+                    onChange={(event) => setQuickLicitationForm({ ...quickLicitationForm, dueDate: event.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-bold text-slate-400">
+                  Presupuesto Estimado
+                  <input
+                    value={quickLicitationForm.budgetUsd}
+                    onChange={(event) => setQuickLicitationForm({ ...quickLicitationForm, budgetUsd: event.target.value })}
+                    placeholder="USD 13.557.150 / CLP 250.000.000"
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                  />
+                </label>
+                <label className="text-xs font-bold text-slate-400">
+                  Estado
+                  <select
+                    value={quickLicitationForm.workflowStatus}
+                    onChange={(event) => setQuickLicitationForm({ ...quickLicitationForm, workflowStatus: event.target.value as LicitationWorkflowStatus })}
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                  >
+                    {LICITATION_WORKFLOW_STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="text-xs font-bold text-slate-400">
+                Encargado / Lider de Licitacion
+                <select
+                  value={quickLicitationForm.leaderPersonId}
+                  onChange={(event) => setQuickLicitationForm({ ...quickLicitationForm, leaderPersonId: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500"
+                >
+                  <option value="">-- Sin lider asignado --</option>
+                  {board.people.map((person) => (
+                    <option key={person.id} value={person.id}>{person.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsQuickLicitationModalOpen(false)}
+                className="rounded-xl border border-slate-800 px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400">
+                Crear Licitacion
               </button>
             </div>
           </form>
