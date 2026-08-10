@@ -500,7 +500,7 @@ function PersonCard({
       style={style}
       data-person-id={person.id}
       onClick={() => onOpen(person)}
-      className={`group rounded-xl border transition-all duration-200 ${dense ? 'p-2' : 'p-3'} ${
+      className={`group rounded-xl border transition-all duration-200 ${dense ? 'p-2' : 'p-2.5'} ${
         selected
           ? 'border-amber-400 bg-amber-950/30 shadow-[0_0_16px_rgba(251,191,36,0.18)]'
           : 'border-slate-800 bg-slate-900/75 hover:border-slate-700 hover:bg-slate-900'
@@ -592,7 +592,7 @@ function AssignmentCard({
       style={style}
       data-person-id={person.id}
       onClick={() => onOpen(person)}
-      className={`group rounded-xl border transition-all duration-200 ${dense ? 'p-2' : 'p-3'} ${
+      className={`group rounded-xl border transition-all duration-200 ${dense ? 'p-2' : 'p-2.5'} ${
         selected
           ? 'border-amber-400 bg-amber-950/30 shadow-[0_0_16px_rgba(251,191,36,0.18)]'
           : 'border-slate-800 bg-slate-900/70 hover:border-slate-700 hover:bg-slate-900'
@@ -716,10 +716,10 @@ function EntityColumn({
       ref={setNodeRef}
       style={columnStyle}
       className={`flex h-[440px] flex-col overflow-hidden rounded-2xl border-2 bg-slate-900/45 backdrop-blur-md transition-all ${
-        fitMode ? 'w-full min-w-0' : 'w-[340px] min-w-[340px] snap-start'
+        fitMode ? 'w-full min-w-0' : 'w-[280px] min-w-[280px] shrink-0 snap-start'
       } ${isColumnDragging ? 'opacity-40' : 'opacity-100'} ${isOver ? 'border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.22)]' : 'border-slate-800/80'}`}
     >
-      <header className={`border-b bg-gradient-to-r ${meta.className} ${fitMode ? 'p-2.5' : 'p-4'}`}>
+      <header className={`border-b bg-gradient-to-r ${meta.className} ${fitMode ? 'p-2.5' : 'p-3'}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <span
@@ -787,7 +787,7 @@ function EntityColumn({
         </div>
       </header>
 
-      <div className={`flex-1 overflow-y-auto ${fitMode ? 'space-y-1.5 p-2' : 'space-y-2.5 p-3'}`}>
+      <div className={`flex-1 overflow-y-auto ${fitMode ? 'space-y-1.5 p-2' : 'space-y-2 p-2.5'}`}>
         {assignments.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-800 p-6 text-center text-slate-500">
             <Users className="mb-2 h-8 w-8 opacity-25" />
@@ -853,10 +853,10 @@ function BankColumn({
     <section
       ref={setNodeRef}
       className={`z-30 flex h-[440px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 bg-slate-950/80 backdrop-blur-md transition-all ${
-        collapsed ? 'w-[56px] min-w-[56px]' : `min-w-[300px] w-[300px] ${dense ? '' : 'snap-start'}`
+        collapsed ? 'w-[56px] min-w-[56px]' : `min-w-[280px] w-[280px] ${dense ? '' : 'snap-start'}`
       } ${isOver ? 'border-red-400 shadow-[0_0_24px_rgba(248,113,113,0.24)]' : 'border-slate-800'}`}
     >
-      <header className={`flex items-start justify-between gap-2 border-b border-slate-800 ${collapsed ? 'p-2' : 'p-4'}`}>
+      <header className={`flex items-start justify-between gap-2 border-b border-slate-800 ${collapsed ? 'p-2' : 'p-3'}`}>
         {!collapsed && (
           <div className="min-w-0">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
@@ -879,7 +879,7 @@ function BankColumn({
         </button>
       </header>
       {!collapsed && (
-        <div className="flex-1 space-y-2.5 overflow-y-auto p-3">
+        <div className="flex-1 space-y-2 overflow-y-auto p-2.5">
           {people.map((person) => (
             <PersonCard
               key={person.id}
@@ -965,11 +965,11 @@ function HoldingColumn({
 
   return (
     <section
-      className={`holding-column z-30 flex h-[440px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-slate-950/85 shadow-[0_0_24px_rgba(245,158,11,0.16)] backdrop-blur-md ${
-        fitMode ? 'w-[260px] min-w-[260px]' : 'w-[320px] min-w-[320px] snap-start'
+      className={`holding-column z-30 flex h-auto shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-slate-950/85 shadow-[0_0_24px_rgba(245,158,11,0.16)] backdrop-blur-md ${
+        fitMode ? 'w-[260px] min-w-[260px]' : 'w-[280px] min-w-[280px] snap-start'
       }`}
     >
-      <header className={`border-b border-amber-400/30 bg-gradient-to-r from-amber-500 to-yellow-500 ${fitMode ? 'p-2.5' : 'p-4'}`}>
+      <header className={`border-b border-amber-400/30 bg-gradient-to-r from-amber-500 to-yellow-500 ${fitMode ? 'p-2.5' : 'p-3'}`}>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-slate-950/35 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
           <Crown className="h-3 w-3" />
           Directorio / Holding
@@ -978,8 +978,8 @@ function HoldingColumn({
         {!fitMode && <p className="mt-1 text-xs leading-relaxed text-white/85">Referencia fija para decisiones, reportes y dirección del grupo.</p>}
       </header>
 
-      <div className={`relative flex flex-1 flex-col ${fitMode ? 'p-2' : 'p-4'}`}>
-        <div className="absolute left-1/2 top-[96px] h-[118px] w-0.5 -translate-x-1/2 bg-amber-400/70" />
+      <div className={`relative flex flex-col ${fitMode ? 'p-2' : 'p-3'}`}>
+        <div className="absolute left-1/2 top-[88px] h-[110px] w-0.5 -translate-x-1/2 bg-amber-400/70" />
 
         {level0 && <HoldingCard member={level0} icon={Crown} accent="amber" readOnly={readOnly} onEdit={onEditMember} />}
 
@@ -989,7 +989,7 @@ function HoldingColumn({
 
         {level1 && <HoldingCard member={level1} icon={User} accent="cyan" readOnly={readOnly} onEdit={onEditMember} />}
 
-        <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-cyan-400/40 bg-slate-900/45 p-3 text-center">
+        <div className="mt-3 flex flex-col items-center justify-center rounded-xl border border-dashed border-cyan-400/40 bg-slate-900/45 p-3 text-center">
           <Network className="mb-2 h-5 w-5 text-cyan-700 dark:text-cyan-300" />
           <p className="text-xs font-bold text-slate-900 dark:text-slate-200">Las entidades del tablero reportan operativamente a Rafael.</p>
           <p className="mt-1 text-[10px] leading-relaxed text-slate-500">La estructura sigue horizontal; esta columna solo fija la referencia de decisión.</p>
