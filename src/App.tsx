@@ -88,11 +88,20 @@ interface ReportConnection {
   label: string;
 }
 
+interface HoldingMember {
+  id: string;
+  level: 0 | 1;
+  name: string;
+  role: string;
+  notes: string;
+}
+
 interface BoardState {
   people: Person[];
   entities: BoardEntity[];
   assignments: Assignment[];
   connections: ReportConnection[];
+  holdingMembers: HoldingMember[];
 }
 
 interface ToastMessage {
@@ -190,6 +199,10 @@ const INITIAL_STATE: BoardState = {
     { id: 'conn-1', sourcePersonId: 'person-3', targetPersonId: 'person-2', label: 'Reporta avances administrativos' },
     { id: 'conn-2', sourcePersonId: 'person-7', targetPersonId: 'person-8', label: 'Coordina licitación y compras' },
   ],
+  holdingMembers: [
+    { id: 'holding-0', level: 0, name: 'Damir Solar', role: 'Dueño', notes: 'Radicado en el extranjero (10 meses al año).' },
+    { id: 'holding-1', level: 1, name: 'Rafael Valenzuela Munita', role: 'Asesor Financiero y del Directorio', notes: 'Nexo principal para la toma de decisiones del Holding.' },
+  ],
 };
 
 function createId(prefix: string) {
@@ -215,6 +228,17 @@ function isValidBoardState(value: unknown): value is BoardState {
   );
 }
 
+// `holdingMembers` was introduced after boards were already saved/exported.
+// Backfill it with the default pair so older stored/imported states keep working.
+function withHoldingMembersFallback(state: BoardState): BoardState {
+  return {
+    ...state,
+    holdingMembers: Array.isArray(state.holdingMembers) && state.holdingMembers.length > 0
+      ? state.holdingMembers
+      : INITIAL_STATE.holdingMembers,
+  };
+}
+
 function loadState(): BoardState {
   if (typeof window === 'undefined') return INITIAL_STATE;
 
@@ -223,7 +247,7 @@ function loadState(): BoardState {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (isValidBoardState(parsed)) {
-        return parsed;
+        return withHoldingMembersFallback(parsed);
       }
     }
 
@@ -253,7 +277,7 @@ function loadState(): BoardState {
           taskText: employee.notes || '',
         }));
 
-        return { people, entities, assignments, connections: [] };
+        return { people, entities, assignments, connections: [], holdingMembers: INITIAL_STATE.holdingMembers };
       }
     }
   } catch {
@@ -480,6 +504,7 @@ function EntityColumn({
   onOpenPerson,
   onConnect,
   onEditEntity,
+  onDeleteEntity,
 }: {
   entity: BoardEntity;
   assignments: Assignment[];
@@ -492,6 +517,7 @@ function EntityColumn({
   onOpenPerson: (person: Person) => void;
   onConnect: (person: Person) => void;
   onEditEntity: (entity: BoardEntity) => void;
+  onDeleteEntity: (entity: BoardEntity) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `entity:${entity.id}` });
   const meta = ENTITY_META[entity.type];
@@ -520,14 +546,24 @@ function EntityColumn({
           </div>
           <div className="flex flex-col items-end gap-2">
             <span className={`rounded-full border border-white/20 bg-slate-950/35 font-bold text-white ${fitMode ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'}`}>{assignments.length}</span>
-            <button
-              type="button"
-              onClick={() => onEditEntity(entity)}
-              className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white"
-              title="Editar entidad"
-            >
-              <Edit2 className="h-3.5 w-3.5" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onEditEntity(entity)}
+                className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:bg-slate-950/55 hover:text-white"
+                title="Editar entidad"
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDeleteEntity(entity)}
+                className="rounded-lg border border-white/20 bg-slate-950/35 p-1.5 text-white/80 transition-colors hover:border-red-300/60 hover:bg-red-950/50 hover:text-red-200"
+                title="Eliminar entidad"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -565,7 +601,63 @@ function EntityColumn({
   );
 }
 
-function HoldingColumn({ fitMode }: { fitMode: boolean }) {
+function HoldingCard({
+  member,
+  icon: Icon,
+  accent,
+  onEdit,
+}: {
+  member: HoldingMember;
+  icon: React.ElementType;
+  accent: 'amber' | 'cyan';
+  onEdit: (member: HoldingMember) => void;
+}) {
+  const accentClasses =
+    accent === 'amber'
+      ? { border: 'border-amber-300/50', iconBg: 'bg-amber-400', label: 'text-amber-700 dark:text-amber-300', editBorder: 'border-amber-300/50 hover:bg-amber-400/20' }
+      : { border: 'border-cyan-300/50', iconBg: 'bg-cyan-400', label: 'text-cyan-700 dark:text-cyan-300', editBorder: 'border-cyan-300/50 hover:bg-cyan-400/20' };
+
+  return (
+    <div className={`holding-card relative z-10 rounded-xl border ${accentClasses.border} bg-slate-900/80 p-3 shadow-lg`}>
+      <div className="flex items-start gap-3">
+        <div className={`rounded-xl ${accentClasses.iconBg} p-2 text-slate-950`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <span className={`text-[10px] font-extrabold uppercase tracking-wider ${accentClasses.label}`}>
+              Nivel {member.level}
+            </span>
+            <button
+              type="button"
+              onClick={() => onEdit(member)}
+              className={`rounded-lg border ${accentClasses.editBorder} bg-slate-950/10 p-1 text-slate-700 transition-colors dark:text-slate-200`}
+              title="Editar miembro"
+            >
+              <Edit2 className="h-3 w-3" />
+            </button>
+          </div>
+          <h4 className="mt-1 break-words font-display text-sm font-extrabold leading-tight text-slate-900 dark:text-white">{member.name}</h4>
+          <p className="mt-0.5 text-xs font-bold text-slate-800 dark:text-slate-300">{member.role}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-slate-400">{member.notes}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HoldingColumn({
+  members,
+  fitMode,
+  onEditMember,
+}: {
+  members: HoldingMember[];
+  fitMode: boolean;
+  onEditMember: (member: HoldingMember) => void;
+}) {
+  const level0 = members.find((member) => member.level === 0);
+  const level1 = members.find((member) => member.level === 1);
+
   return (
     <section
       className={`holding-column z-30 flex h-[620px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-slate-950/85 shadow-[0_0_24px_rgba(245,158,11,0.16)] backdrop-blur-md ${
@@ -584,35 +676,13 @@ function HoldingColumn({ fitMode }: { fitMode: boolean }) {
       <div className={`relative flex flex-1 flex-col ${fitMode ? 'p-2' : 'p-4'}`}>
         <div className="absolute left-1/2 top-[96px] h-[118px] w-0.5 -translate-x-1/2 bg-amber-400/70" />
 
-        <div className="holding-card relative z-10 rounded-xl border border-amber-300/50 bg-slate-900/80 p-3 shadow-lg">
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-amber-400 p-2 text-slate-950">
-              <Crown className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300">Nivel 0</span>
-              <h4 className="mt-1 font-display text-sm font-extrabold leading-tight text-slate-900 dark:text-white">Damir Solar - Dueño</h4>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-slate-400">Radicado en el extranjero (10 meses al año).</p>
-            </div>
-          </div>
-        </div>
+        {level0 && <HoldingCard member={level0} icon={Crown} accent="amber" onEdit={onEditMember} />}
 
         <div className="z-10 mx-auto my-3 rounded-full border border-amber-300/50 bg-slate-950 px-2 py-0.5 text-[10px] font-bold text-amber-300">
           reporta / asesora
         </div>
 
-        <div className="holding-card relative z-10 rounded-xl border border-cyan-300/50 bg-slate-900/80 p-3 shadow-lg">
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-cyan-400 p-2 text-slate-950">
-              <User className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">Nivel 1</span>
-              <h4 className="mt-1 font-display text-sm font-extrabold leading-tight text-slate-900 dark:text-white">Rafael Valenzuela Munita - Asesor Financiero y del Directorio</h4>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-slate-400">Nexo principal para la toma de decisiones del Holding.</p>
-            </div>
-          </div>
-        </div>
+        {level1 && <HoldingCard member={level1} icon={User} accent="cyan" onEdit={onEditMember} />}
 
         <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-cyan-400/40 bg-slate-900/45 p-3 text-center">
           <Network className="mb-2 h-5 w-5 text-cyan-700 dark:text-cyan-300" />
@@ -639,8 +709,10 @@ export default function App() {
   const [activePersonId, setActivePersonId] = useState<string | null>(null);
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false);
   const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
+  const [isHoldingModalOpen, setIsHoldingModalOpen] = useState(false);
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const [editingEntityId, setEditingEntityId] = useState<string | null>(null);
+  const [editingHoldingId, setEditingHoldingId] = useState<string | null>(null);
   const [manualAssignEntityId, setManualAssignEntityId] = useState('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [connectionLines, setConnectionLines] = useState<ConnectionLine[]>([]);
@@ -661,6 +733,12 @@ export default function App() {
     name: '',
     type: 'empresa' as EntityType,
     description: '',
+  });
+
+  const [holdingForm, setHoldingForm] = useState({
+    name: '',
+    role: '',
+    notes: '',
   });
 
   const sensors = useSensors(
@@ -772,7 +850,7 @@ export default function App() {
 
       if (!window.confirm('Importar reemplazará todos los datos actuales del tablero. ¿Continuar?')) return;
 
-      setBoard(parsed);
+      setBoard(withHoldingMembersFallback(parsed));
       setSelectedPersonId(null);
       setSelectedConnectionPersonId(null);
       showToast('Tablero importado correctamente.', 'success');
@@ -930,9 +1008,9 @@ export default function App() {
 
   const handleDeletePerson = (personId: string) => {
     const person = board.people.find((candidate) => candidate.id === personId);
-    if (!person) return;
+    if (!person) return false;
 
-    if (!window.confirm(`¿Eliminar definitivamente a ${person.name}? Se quitarán sus asignaciones, tareas y conexiones.`)) return;
+    if (!window.confirm(`¿Eliminar definitivamente a ${person.name}? Se quitará del banco de personas, del tablero y de sus conexiones.`)) return false;
 
     setBoard((prev) => ({
       ...prev,
@@ -944,6 +1022,44 @@ export default function App() {
     }));
     setSelectedPersonId(null);
     showToast(`${person.name} eliminado definitivamente.`, 'warning');
+    return true;
+  };
+
+  const handleDeleteEntity = (entityId: string) => {
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    if (!entity) return;
+
+    if (!window.confirm(`¿Eliminar definitivamente "${entity.name}"? Se quitarán sus asignaciones asociadas.`)) return;
+
+    setBoard((prev) => ({
+      ...prev,
+      entities: prev.entities.filter((candidate) => candidate.id !== entityId),
+      assignments: prev.assignments.filter((assignment) => assignment.entityId !== entityId),
+    }));
+    showToast(`${entity.name} eliminado definitivamente.`, 'warning');
+  };
+
+  const openEditHoldingModal = (member: HoldingMember) => {
+    setEditingHoldingId(member.id);
+    setHoldingForm({ name: member.name, role: member.role, notes: member.notes });
+    setIsHoldingModalOpen(true);
+  };
+
+  const handleSaveHolding = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingHoldingId || !holdingForm.name.trim()) return;
+
+    setBoard((prev) => ({
+      ...prev,
+      holdingMembers: prev.holdingMembers.map((member) =>
+        member.id === editingHoldingId
+          ? { ...member, name: holdingForm.name.trim(), role: holdingForm.role.trim(), notes: holdingForm.notes.trim() }
+          : member
+      ),
+    }));
+    setIsHoldingModalOpen(false);
+    setEditingHoldingId(null);
+    showToast('Cúpula directiva actualizada.', 'success');
   };
 
   const handleAssignPersonToEntity = (personId: string, entityId: string) => {
@@ -1332,7 +1448,7 @@ export default function App() {
                 })}
               </svg>
 
-              <HoldingColumn fitMode={fitToScreen} />
+              <HoldingColumn members={board.holdingMembers} fitMode={fitToScreen} onEditMember={openEditHoldingModal} />
 
               <section
                 className={`z-30 flex h-[620px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-slate-800 bg-slate-950/80 backdrop-blur-md transition-all ${
@@ -1346,7 +1462,7 @@ export default function App() {
                         <Users className="h-3 w-3" />
                         Banco
                       </span>
-                      <h3 className="mt-2 font-display text-lg font-extrabold text-white">Personas disponibles</h3>
+                      <h3 className="mt-2 font-display text-lg font-extrabold text-slate-900 dark:text-slate-100">Personas disponibles</h3>
                       <p className="mt-1 text-xs text-slate-500">Arrastra a cualquier columna. No se mueven: se copian.</p>
                     </div>
                   )}
@@ -1397,6 +1513,7 @@ export default function App() {
                       onOpenPerson={(person) => setSelectedPersonId(person.id)}
                       onConnect={handleConnectPerson}
                       onEditEntity={openEditEntityModal}
+                      onDeleteEntity={(entityToDelete) => handleDeleteEntity(entityToDelete.id)}
                     />
                   </div>
                 );
@@ -1604,9 +1721,25 @@ export default function App() {
               </label>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={() => setIsPersonModalOpen(false)} className="rounded-xl border border-slate-800 px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white">Cancelar</button>
-              <button type="submit" className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500">Guardar</button>
+            <div className="mt-5 flex items-center justify-between gap-2">
+              {editingPersonId ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (handleDeletePerson(editingPersonId)) setIsPersonModalOpen(false);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-950/30 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-950/50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Eliminar
+                </button>
+              ) : (
+                <span />
+              )}
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setIsPersonModalOpen(false)} className="rounded-xl border border-slate-800 px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white">Cancelar</button>
+                <button type="submit" className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500">Guardar</button>
+              </div>
             </div>
           </form>
         </div>
@@ -1662,6 +1795,57 @@ export default function App() {
               </button>
               <button type="submit" className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500">
                 {editingEntityId ? 'Guardar cambios' : 'Crear entidad'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {isHoldingModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <form onSubmit={handleSaveHolding} className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="font-display text-lg font-extrabold text-white">Editar miembro de la cúpula directiva</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingHoldingId(null);
+                  setIsHoldingModalOpen(false);
+                }}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid gap-4">
+              <label className="text-xs font-bold text-slate-400">
+                Nombre
+                <input required value={holdingForm.name} onChange={(event) => setHoldingForm({ ...holdingForm, name: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500" />
+              </label>
+              <label className="text-xs font-bold text-slate-400">
+                Rol / Cargo
+                <input value={holdingForm.role} onChange={(event) => setHoldingForm({ ...holdingForm, role: event.target.value })} placeholder="Ej: Dueño, Asesor Financiero y del Directorio" className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500" />
+              </label>
+              <label className="text-xs font-bold text-slate-400">
+                Descripción / Notas
+                <textarea value={holdingForm.notes} onChange={(event) => setHoldingForm({ ...holdingForm, notes: event.target.value })} rows={3} placeholder="Ej: Radicado en el extranjero..." className="mt-1 w-full resize-none rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 outline-none focus:border-amber-500" />
+              </label>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingHoldingId(null);
+                  setIsHoldingModalOpen(false);
+                }}
+                className="rounded-xl border border-slate-800 px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400">
+                Guardar cambios
               </button>
             </div>
           </form>
