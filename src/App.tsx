@@ -100,6 +100,9 @@ interface Position {
   department: string;
   fte: number; // fraction of full-time dedication, e.g. 1 = 100%, 0.5 = 50%
   assignedPersonId: string | null;
+  // Specific functions/tasks assigned to whoever occupies this seat in this
+  // entity. A task is "done" when it starts with TASK_DONE_PREFIX.
+  tasks: string[];
 }
 
 interface BoardEntity {
@@ -247,6 +250,22 @@ function formatFte(fte: number) {
   return `${Math.round(fte * 100)}%`;
 }
 
+// Position tasks are plain strings; a task is marked "done" by prefixing it with
+// this marker so the shape stays `tasks: string[]` (no extra fields to migrate).
+const TASK_DONE_PREFIX = '✔ ';
+
+function isTaskDone(task: string) {
+  return task.startsWith(TASK_DONE_PREFIX);
+}
+
+function taskLabel(task: string) {
+  return isTaskDone(task) ? task.slice(TASK_DONE_PREFIX.length) : task;
+}
+
+function toggleTaskDoneMarker(task: string) {
+  return isTaskDone(task) ? taskLabel(task) : `${TASK_DONE_PREFIX}${task}`;
+}
+
 const SUGGESTED_TAGS = ['RRHH', 'Licitaciones', 'ITO', 'Dirección', 'Legal', 'Finanzas', 'Tecnología', 'Logística'];
 
 function getTagColorStyle(color: TagColorKey) {
@@ -363,8 +382,8 @@ const INITIAL_STATE: BoardState = {
       name: 'Cramick S.A.',
       description: 'Licitaciones de defensa y logística militar.',
       positions: [
-        { id: 'pos-cramick-1', title: 'Jefe de Proyecto', department: 'Dirección', fte: 1, assignedPersonId: 'person-2' },
-        { id: 'pos-cramick-2', title: 'Encargado de Licitaciones', department: 'Comercial', fte: 0.5, assignedPersonId: null },
+        { id: 'pos-cramick-1', title: 'Jefe de Proyecto', department: 'Dirección', fte: 1, assignedPersonId: 'person-2', tasks: ['Coordinar cronograma general', 'Aprobación de facturas'] },
+        { id: 'pos-cramick-2', title: 'Encargado de Licitaciones', department: 'Comercial', fte: 0.5, assignedPersonId: null, tasks: [] },
       ],
     },
     {
@@ -373,8 +392,8 @@ const INITIAL_STATE: BoardState = {
       name: 'Centurion Armors SpA',
       description: 'Equipamiento táctico, blindaje y seguridad avanzada.',
       positions: [
-        { id: 'pos-centurion-1', title: 'Jefe de Compras', department: 'Operaciones', fte: 1, assignedPersonId: 'person-8' },
-        { id: 'pos-centurion-2', title: 'Analista de Contratos', department: 'Legal', fte: 0.25, assignedPersonId: null },
+        { id: 'pos-centurion-1', title: 'Jefe de Compras', department: 'Operaciones', fte: 1, assignedPersonId: 'person-8', tasks: ['Cotizar seguros', 'Supervisar avance en terreno'] },
+        { id: 'pos-centurion-2', title: 'Analista de Contratos', department: 'Legal', fte: 0.25, assignedPersonId: null, tasks: [] },
       ],
     },
     { id: 'entity-bedrock', type: 'empresa', name: 'Bedrock S.A.', description: 'Servicios gastronómicos y operaciones de restauración.' },
@@ -473,6 +492,7 @@ function normalizePosition(position: Partial<Position> & { id?: string }): Posit
     department: typeof position.department === 'string' ? position.department : '',
     fte: typeof position.fte === 'number' && position.fte > 0 && position.fte <= 1 ? position.fte : 1,
     assignedPersonId: typeof position.assignedPersonId === 'string' ? position.assignedPersonId : null,
+    tasks: Array.isArray(position.tasks) ? position.tasks.filter((task): task is string => typeof task === 'string') : [],
   };
 }
 
@@ -744,6 +764,7 @@ function PersonCard({
   onConnect,
   onHover,
   onToggleBadges,
+  onOpenSummary,
 }: {
   person: Person;
   searchQuery: string;
@@ -758,6 +779,7 @@ function PersonCard({
   onConnect: (person: Person) => void;
   onHover?: (personId: string | null) => void;
   onToggleBadges?: (personId: string) => void;
+  onOpenSummary?: (personId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `person:${person.id}`,
@@ -798,6 +820,19 @@ function PersonCard({
           </h4>
           {!compact && <p className="mt-1 text-[11px] font-medium text-slate-500">{person.category}</p>}
         </div>
+        {onOpenSummary && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenSummary(person.id);
+            }}
+            className="rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+            title="Ver hoja de funciones consolidada"
+          >
+            <ClipboardList className="h-3.5 w-3.5" />
+          </button>
+        )}
         {!readOnly && (
           <button
             type="button"
@@ -864,6 +899,7 @@ function AssignmentCard({
   onMoveAssignment,
   onHover,
   onToggleBadges,
+  onOpenSummary,
 }: {
   assignment: Assignment;
   person: Person;
@@ -883,6 +919,7 @@ function AssignmentCard({
   onMoveAssignment: (assignmentId: string, direction: 'up' | 'down') => void;
   onHover?: (personId: string | null) => void;
   onToggleBadges?: (personId: string) => void;
+  onOpenSummary?: (personId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `assignment:${assignment.id}`,
@@ -923,6 +960,19 @@ function AssignmentCard({
           </h4>
           {!compact && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{assignment.taskText || 'Sin función específica registrada.'}</p>}
         </div>
+        {onOpenSummary && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenSummary(person.id);
+            }}
+            className="shrink-0 rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-slate-500 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+            title="Ver hoja de funciones consolidada"
+          >
+            <ClipboardList className="h-3.5 w-3.5" />
+          </button>
+        )}
         {!readOnly && (
           <div className="flex shrink-0 items-center gap-1">
             <div className="flex flex-col gap-1">
@@ -1050,6 +1100,9 @@ function PositionCard({
   canMoveUp,
   canMoveDown,
   onMove,
+  onAddTask,
+  onToggleTask,
+  onRemoveTask,
 }: {
   position: Position;
   entityId: string;
@@ -1062,11 +1115,15 @@ function PositionCard({
   canMoveUp: boolean;
   canMoveDown: boolean;
   onMove: (positionId: string, direction: 'up' | 'down') => void;
+  onAddTask: (entityId: string, positionId: string, taskText: string) => void;
+  onToggleTask: (entityId: string, positionId: string, taskIndex: number) => void;
+  onRemoveTask: (entityId: string, positionId: string, taskIndex: number) => void;
 }) {
   const assignedPerson = position.assignedPersonId
     ? people.find((candidate) => candidate.id === position.assignedPersonId) || null
     : null;
   const isVacant = !assignedPerson;
+  const tasks = position.tasks || [];
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
     id: `position:${position.id}`,
@@ -1076,8 +1133,17 @@ function PositionCard({
 
   const [pickedPersonId, setPickedPersonId] = useState('');
   const [pickedFte, setPickedFte] = useState<number>(1);
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [newTaskText, setNewTaskText] = useState('');
   const style = transform ? { transform: CSS.Transform.toString(transform), transition } : { transition };
   const assignedPersonId = assignedPerson?.id;
+
+  const submitNewTask = () => {
+    const cleanTask = newTaskText.trim();
+    if (!cleanTask) return;
+    onAddTask(entityId, position.id, cleanTask);
+    setNewTaskText('');
+  };
 
   return (
     <div
@@ -1107,6 +1173,25 @@ function PositionCard({
               <RoleBadge role={assignedPerson.role} />
             </div>
           )}
+          {(tasks.length > 0 || !readOnly) && (
+            <div className="mt-1.5">
+              <button
+                type="button"
+                onClick={() => setTasksOpen((prev) => !prev)}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-[9px] font-bold text-slate-400 transition-colors hover:border-indigo-500/50 hover:text-indigo-300"
+                title={tasksOpen ? 'Ocultar funciones' : 'Ver / editar funciones específicas de este puesto'}
+              >
+                <ClipboardList className="h-2.5 w-2.5" />
+                {tasks.length > 0 ? `${tasks.length} función${tasks.length === 1 ? '' : 'es'}` : 'Sin funciones'}
+                {tasksOpen ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
+              </button>
+              {!tasksOpen && tasks.length > 0 && (
+                <p className="mt-1 truncate text-[9px] italic text-slate-500">
+                  {tasks.slice(0, 2).map(taskLabel).join(' · ')}
+                </p>
+              )}
+            </div>
+          )}
         </div>
         {isVacant ? (
           <span className="shrink-0 rounded-full border border-amber-400/60 bg-amber-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-300">
@@ -1114,6 +1199,67 @@ function PositionCard({
           </span>
         ) : null}
       </div>
+
+      {tasksOpen && (
+        <div className="mt-2 space-y-1.5 rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+          {tasks.length === 0 ? (
+            <p className="text-[10px] text-slate-500">Sin funciones específicas registradas todavía.</p>
+          ) : (
+            <ul className="space-y-1">
+              {tasks.map((task, taskIndex) => (
+                <li key={`${position.id}-task-${taskIndex}`} className="flex items-start gap-1.5">
+                  <button
+                    type="button"
+                    disabled={readOnly}
+                    onClick={() => onToggleTask(entityId, position.id, taskIndex)}
+                    className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded border transition-colors ${
+                      isTaskDone(task) ? 'border-emerald-500 bg-emerald-500/70' : 'border-slate-600 bg-transparent hover:border-slate-500'
+                    } disabled:cursor-not-allowed`}
+                    title={isTaskDone(task) ? 'Marcar como pendiente' : 'Marcar como completada'}
+                  />
+                  <span className={`min-w-0 flex-1 break-words text-[10.5px] leading-snug ${isTaskDone(task) ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+                    {taskLabel(task)}
+                  </span>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveTask(entityId, position.id, taskIndex)}
+                      className="shrink-0 text-slate-600 transition-colors hover:text-red-300"
+                      title="Quitar función"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {!readOnly && (
+            <div className="flex gap-1 pt-1">
+              <input
+                value={newTaskText}
+                onChange={(event) => setNewTaskText(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    submitNewTask();
+                  }
+                }}
+                placeholder="Nueva función…"
+                className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={submitNewTask}
+                className="shrink-0 rounded-md border border-indigo-500/40 bg-indigo-950/30 px-2 text-[10px] font-bold text-indigo-300 transition-colors hover:bg-indigo-950/50"
+                title="Agregar función"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {assignedPerson ? (
         !readOnly && (
@@ -1248,7 +1394,11 @@ function EntityColumn({
   onAssignPosition,
   onUnassignPosition,
   onReorderPosition,
+  onAddPositionTask,
+  onTogglePositionTask,
+  onRemovePositionTask,
   onToggleBadges,
+  onOpenSummary,
 }: {
   entity: BoardEntity;
   assignments: Assignment[];
@@ -1277,7 +1427,11 @@ function EntityColumn({
   onAssignPosition: (entityId: string, positionId: string, personId: string, fte: number) => void;
   onUnassignPosition: (entityId: string, positionId: string) => void;
   onReorderPosition: (entityId: string, activePositionId: string, overPositionId: string) => void;
+  onAddPositionTask: (entityId: string, positionId: string, taskText: string) => void;
+  onTogglePositionTask: (entityId: string, positionId: string, taskIndex: number) => void;
+  onRemovePositionTask: (entityId: string, positionId: string, taskIndex: number) => void;
   onToggleBadges: (personId: string) => void;
+  onOpenSummary: (personId: string) => void;
 }) {
   const positions = entity.positions || [];
   const positionedPersonIds = new Set(
@@ -1432,6 +1586,9 @@ function EntityColumn({
                     onEdit={onEditPosition}
                     onDelete={onDeletePosition}
                     onMove={movePosition}
+                    onAddTask={onAddPositionTask}
+                    onToggleTask={onTogglePositionTask}
+                    onRemoveTask={onRemovePositionTask}
                   />
                 ))}
               </div>
@@ -1469,6 +1626,7 @@ function EntityColumn({
                       onMoveAssignment={moveAssignment}
                       onHover={onHoverPerson}
                       onToggleBadges={onToggleBadges}
+                      onOpenSummary={onOpenSummary}
                     />
                   );
                 })}
@@ -1600,6 +1758,7 @@ function BankPersonEntry({
   onDeletePerson,
   onAssign,
   onToggleBadges,
+  onOpenSummary,
 }: {
   person: Person;
   searchQuery: string;
@@ -1617,6 +1776,7 @@ function BankPersonEntry({
   onDeletePerson: (personId: string) => void;
   onAssign: (personId: string, entityId: string) => void;
   onToggleBadges: (personId: string) => void;
+  onOpenSummary: (personId: string) => void;
 }) {
   const assignableEntities = useMemo(
     () => entities.filter((entity) => !assignedEntityIds.has(entity.id)),
@@ -1644,6 +1804,7 @@ function BankPersonEntry({
         onConnect={onConnect}
         onHover={onHoverPerson}
         onToggleBadges={onToggleBadges}
+        onOpenSummary={onOpenSummary}
       />
       {!readOnly && (
         <div className="mt-1.5 flex items-center gap-1.5 px-0.5">
@@ -1721,6 +1882,7 @@ function BankDrawer({
   onAssignPerson,
   onOpenNewPerson,
   onToggleBadges,
+  onOpenSummary,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -1748,6 +1910,7 @@ function BankDrawer({
   onAssignPerson: (personId: string, entityId: string) => void;
   onOpenNewPerson: () => void;
   onToggleBadges: (personId: string) => void;
+  onOpenSummary: (personId: string) => void;
 }) {
   if (!isOpen) return null;
 
@@ -1852,6 +2015,7 @@ function BankDrawer({
                   onDeletePerson={onDeletePerson}
                   onAssign={onAssignPerson}
                   onToggleBadges={onToggleBadges}
+                  onOpenSummary={onOpenSummary}
                 />
               );
             })
@@ -2191,6 +2355,255 @@ function MindMapModal({
   );
 }
 
+// Small controlled input used inside PersonTaskSummaryModal to append a new task
+// to a specific position without lifting per-position input state into the modal.
+function PositionTaskQuickAdd({
+  entityId,
+  positionId,
+  onAddTask,
+}: {
+  entityId: string;
+  positionId: string;
+  onAddTask: (entityId: string, positionId: string, taskText: string) => void;
+}) {
+  const [value, setValue] = useState('');
+
+  const submit = () => {
+    const cleanTask = value.trim();
+    if (!cleanTask) return;
+    onAddTask(entityId, positionId, cleanTask);
+    setValue('');
+  };
+
+  return (
+    <div className="mt-2 flex gap-1.5">
+      <input
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            submit();
+          }
+        }}
+        placeholder="Nueva función…"
+        className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-indigo-500"
+      />
+      <button
+        type="button"
+        onClick={submit}
+        className="shrink-0 rounded-md border border-indigo-500/40 bg-indigo-950/30 px-2 text-[10px] font-bold text-indigo-300 transition-colors hover:bg-indigo-950/50"
+        title="Agregar función"
+      >
+        <Plus className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
+interface PersonEntitySummary {
+  entity: BoardEntity;
+  positions: Position[];
+  assignment: Assignment | null;
+}
+
+// "Hoja de Funciones" — consolidated pop-up for a single Person: every Position
+// they occupy (with FTE% and its task checklist) plus their free-text function in
+// every entity where they participate without a formal seat, across the Holding.
+function PersonTaskSummaryModal({
+  isOpen,
+  onClose,
+  person,
+  entities,
+  assignments,
+  readOnly,
+  onAddPositionTask,
+  onTogglePositionTask,
+  onRemovePositionTask,
+  onUpdateAssignmentTask,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  person: Person | null;
+  entities: BoardEntity[];
+  assignments: Assignment[];
+  readOnly: boolean;
+  onAddPositionTask: (entityId: string, positionId: string, taskText: string) => void;
+  onTogglePositionTask: (entityId: string, positionId: string, taskIndex: number) => void;
+  onRemovePositionTask: (entityId: string, positionId: string, taskIndex: number) => void;
+  onUpdateAssignmentTask: (assignmentId: string, taskText: string) => void;
+}) {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !person) return null;
+
+  const summaries: PersonEntitySummary[] = entities
+    .map((entity) => {
+      const positions = (entity.positions || []).filter((position) => position.assignedPersonId === person.id);
+      const assignment = assignments.find((candidate) => candidate.entityId === entity.id && candidate.personId === person.id) || null;
+      if (positions.length === 0 && !assignment) return null;
+      return { entity, positions, assignment };
+    })
+    .filter((summary): summary is PersonEntitySummary => Boolean(summary));
+
+  const totalFte = summaries.reduce(
+    (sum, summary) => sum + summary.positions.reduce((positionSum, position) => positionSum + position.fte, 0),
+    0
+  );
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-800 p-5">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <ClipboardList className="h-3 w-3" />
+              Hoja de Funciones y Tareas
+            </span>
+            <h2 className="mt-3 break-words font-display text-xl font-extrabold leading-tight text-white">{person.name}</h2>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <RoleBadge role={person.role} />
+              <span className="rounded-md border border-slate-800 bg-slate-950 px-2 py-0.5 text-[10px] font-semibold text-slate-400">{person.category}</span>
+              <span
+                className={`rounded-md border px-2 py-0.5 text-[10px] font-black ${
+                  totalFte > 1
+                    ? 'border-amber-400/60 bg-amber-500/10 text-amber-300'
+                    : 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300'
+                }`}
+                title="Suma del FTE de todos los puestos que ocupa en el Holding"
+              >
+                Carga total: {formatFte(totalFte)} FTE
+              </span>
+            </div>
+            {person.customTags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {person.customTags.map((tag) => {
+                  const colors = getTagColorStyle(tag.color);
+                  return (
+                    <span key={tag.id} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-bold ${colors.bg} ${colors.border} ${colors.text}`}>
+                      {tag.label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {person.supervisor && (
+              <p className="mt-2 text-[11px] font-semibold text-slate-500">
+                Supervisor: <span className="text-slate-300">{person.supervisor}</span>
+              </p>
+            )}
+          </div>
+          <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto p-5">
+          {summaries.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+              Esta persona todavía no participa en ninguna entidad del Holding.
+            </p>
+          ) : (
+            summaries.map(({ entity, positions, assignment }) => {
+              const meta = ENTITY_META[entity.type];
+              return (
+                <section key={entity.id} className="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                    {meta.label}
+                  </span>
+                  <h3 className="mt-1 break-words font-display text-sm font-extrabold text-slate-100">{entity.name}</h3>
+
+                  {positions.length > 0 && (
+                    <div className="mt-2.5 space-y-2.5">
+                      {positions.map((position) => (
+                        <div key={position.id} className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-bold text-slate-100">{position.title}</p>
+                            <span className="rounded-full border border-cyan-700/60 bg-cyan-950/50 px-2 py-0.5 text-[9px] font-black text-cyan-200">
+                              {formatFte(position.fte)} FTE
+                            </span>
+                          </div>
+                          {position.department && <p className="mt-0.5 text-[10px] font-medium text-slate-500">{position.department}</p>}
+
+                          <div className="mt-2 space-y-1">
+                            {(position.tasks || []).length === 0 ? (
+                              <p className="text-[10.5px] text-slate-500">Sin funciones específicas registradas.</p>
+                            ) : (
+                              position.tasks.map((task, taskIndex) => (
+                                <div key={`${position.id}-${taskIndex}`} className="flex items-start gap-1.5">
+                                  <button
+                                    type="button"
+                                    disabled={readOnly}
+                                    onClick={() => onTogglePositionTask(entity.id, position.id, taskIndex)}
+                                    className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded border transition-colors ${
+                                      isTaskDone(task) ? 'border-emerald-500 bg-emerald-500/70' : 'border-slate-600 bg-transparent hover:border-slate-500'
+                                    } disabled:cursor-not-allowed`}
+                                    title={isTaskDone(task) ? 'Marcar como pendiente' : 'Marcar como completada'}
+                                  />
+                                  <span className={`min-w-0 flex-1 break-words text-[11px] leading-snug ${isTaskDone(task) ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+                                    {taskLabel(task)}
+                                  </span>
+                                  {!readOnly && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onRemovePositionTask(entity.id, position.id, taskIndex)}
+                                      className="shrink-0 text-slate-600 transition-colors hover:text-red-300"
+                                      title="Quitar función"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              ))
+                            )}
+                          </div>
+
+                          {!readOnly && <PositionTaskQuickAdd entityId={entity.id} positionId={position.id} onAddTask={onAddPositionTask} />}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {assignment && (
+                    <div className={positions.length > 0 ? 'mt-2.5 border-t border-slate-800/70 pt-2.5' : 'mt-2.5'}>
+                      <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Función general en la entidad</p>
+                      {readOnly ? (
+                        <p className="rounded-lg border border-slate-800 bg-slate-900/60 p-2.5 text-xs leading-relaxed text-slate-300">
+                          {assignment.taskText || 'Sin función específica registrada.'}
+                        </p>
+                      ) : (
+                        <textarea
+                          value={assignment.taskText}
+                          onChange={(event) => onUpdateAssignmentTask(assignment.id, event.target.value)}
+                          rows={2}
+                          placeholder="Describe funciones, tareas o situación específica en esta entidad..."
+                          className="w-full resize-none rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-xs leading-relaxed text-slate-200 outline-none focus:border-indigo-500"
+                        />
+                      )}
+                    </div>
+                  )}
+                </section>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [board, setBoard] = useState<BoardState>(loadState);
   const [theme, setTheme] = useState<ThemeMode>(loadTheme);
@@ -2214,6 +2627,7 @@ export default function App() {
   const [hoveredPersonId, setHoveredPersonId] = useState<string | null>(null);
   const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [taskSummaryPersonId, setTaskSummaryPersonId] = useState<string | null>(null);
   const [activePersonId, setActivePersonId] = useState<string | null>(null);
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false);
   const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
@@ -2268,7 +2682,9 @@ export default function App() {
     department: '',
     fte: 1,
     assignedPersonId: '',
+    tasks: [] as string[],
   });
+  const [positionTaskInput, setPositionTaskInput] = useState('');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -2290,6 +2706,13 @@ export default function App() {
     () => board.people.find((person) => person.id === selectedPersonId) || null,
     [board.people, selectedPersonId]
   );
+
+  const taskSummaryPerson = useMemo(
+    () => board.people.find((person) => person.id === taskSummaryPersonId) || null,
+    [board.people, taskSummaryPersonId]
+  );
+
+  const openTaskSummary = (personId: string) => setTaskSummaryPersonId(personId);
 
   const selectedConnectionPerson = useMemo(
     () => board.people.find((person) => person.id === selectedConnectionPersonId) || null,
@@ -2708,15 +3131,34 @@ export default function App() {
   const openNewPositionModal = (entityId: string) => {
     setEditingPositionId(null);
     setPositionEntityId(entityId);
-    setPositionForm({ title: '', department: '', fte: 1, assignedPersonId: '' });
+    setPositionForm({ title: '', department: '', fte: 1, assignedPersonId: '', tasks: [] });
+    setPositionTaskInput('');
     setIsPositionModalOpen(true);
   };
 
   const openEditPositionModal = (position: Position, entityId: string) => {
     setEditingPositionId(position.id);
     setPositionEntityId(entityId);
-    setPositionForm({ title: position.title, department: position.department, fte: position.fte, assignedPersonId: position.assignedPersonId || '' });
+    setPositionForm({
+      title: position.title,
+      department: position.department,
+      fte: position.fte,
+      assignedPersonId: position.assignedPersonId || '',
+      tasks: position.tasks || [],
+    });
+    setPositionTaskInput('');
     setIsPositionModalOpen(true);
+  };
+
+  const addTaskToPositionForm = () => {
+    const cleanTask = positionTaskInput.trim();
+    if (!cleanTask) return;
+    setPositionForm((prev) => ({ ...prev, tasks: [...prev.tasks, cleanTask] }));
+    setPositionTaskInput('');
+  };
+
+  const removeTaskFromPositionForm = (taskIndex: number) => {
+    setPositionForm((prev) => ({ ...prev, tasks: prev.tasks.filter((_, index) => index !== taskIndex) }));
   };
 
   const handleSavePosition = (event: React.FormEvent) => {
@@ -2735,7 +3177,14 @@ export default function App() {
                 ...entity,
                 positions: (entity.positions || []).map((position) =>
                   position.id === editingPositionId
-                    ? { ...position, title: cleanTitle, department: cleanDepartment, fte: positionForm.fte, assignedPersonId: positionForm.assignedPersonId || null }
+                    ? {
+                        ...position,
+                        title: cleanTitle,
+                        department: cleanDepartment,
+                        fte: positionForm.fte,
+                        assignedPersonId: positionForm.assignedPersonId || null,
+                        tasks: positionForm.tasks,
+                      }
                     : position
                 ),
               }
@@ -2750,6 +3199,7 @@ export default function App() {
         department: cleanDepartment,
         fte: positionForm.fte,
         assignedPersonId: positionForm.assignedPersonId || null,
+        tasks: positionForm.tasks,
       };
       setBoard((prev) => ({
         ...prev,
@@ -2828,6 +3278,48 @@ export default function App() {
       ),
     }));
     showToast(position ? `"${position.title}" quedó vacante.` : 'Puesto liberado.', 'info');
+  };
+
+  // SSoT for a Position's task checklist — every add/toggle/remove funnels through
+  // here so PositionCard's inline panel and the person's "Hoja de Funciones"
+  // modal stay in sync.
+  const handleUpdatePositionTasks = (entityId: string, positionId: string, tasks: string[]) => {
+    setBoard((prev) => ({
+      ...prev,
+      entities: prev.entities.map((entity) =>
+        entity.id === entityId
+          ? {
+              ...entity,
+              positions: (entity.positions || []).map((position) =>
+                position.id === positionId ? { ...position, tasks } : position
+              ),
+            }
+          : entity
+      ),
+    }));
+  };
+
+  const handleAddPositionTask = (entityId: string, positionId: string, taskText: string) => {
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    const position = entity?.positions?.find((candidate) => candidate.id === positionId);
+    const cleanTask = taskText.trim();
+    if (!position || !cleanTask) return;
+    handleUpdatePositionTasks(entityId, positionId, [...(position.tasks || []), cleanTask]);
+  };
+
+  const handleTogglePositionTask = (entityId: string, positionId: string, taskIndex: number) => {
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    const position = entity?.positions?.find((candidate) => candidate.id === positionId);
+    if (!position) return;
+    const nextTasks = (position.tasks || []).map((task, index) => (index === taskIndex ? toggleTaskDoneMarker(task) : task));
+    handleUpdatePositionTasks(entityId, positionId, nextTasks);
+  };
+
+  const handleRemovePositionTask = (entityId: string, positionId: string, taskIndex: number) => {
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    const position = entity?.positions?.find((candidate) => candidate.id === positionId);
+    if (!position) return;
+    handleUpdatePositionTasks(entityId, positionId, (position.tasks || []).filter((_, index) => index !== taskIndex));
   };
 
   const openEditHoldingModal = (member: HoldingMember) => {
@@ -3585,7 +4077,11 @@ export default function App() {
                                   onAssignPosition={handleAssignPersonToPosition}
                                   onUnassignPosition={handleUnassignPosition}
                                   onReorderPosition={handleReorderPosition}
+                                  onAddPositionTask={handleAddPositionTask}
+                                  onTogglePositionTask={handleTogglePositionTask}
+                                  onRemovePositionTask={handleRemovePositionTask}
                                   onToggleBadges={handleTogglePersonBadges}
+                                  onOpenSummary={openTaskSummary}
                                 />
                               </div>
                             );
@@ -3639,6 +4135,7 @@ export default function App() {
         onAssignPerson={handleAssignPersonToEntity}
         onOpenNewPerson={openNewPersonModal}
         onToggleBadges={handleTogglePersonBadges}
+        onOpenSummary={openTaskSummary}
       />
 
       <MindMapModal
@@ -3648,6 +4145,19 @@ export default function App() {
         entitiesByLevel={entitiesByLevel}
         assignments={board.assignments}
         people={board.people}
+      />
+
+      <PersonTaskSummaryModal
+        isOpen={Boolean(taskSummaryPerson)}
+        onClose={() => setTaskSummaryPersonId(null)}
+        person={taskSummaryPerson}
+        entities={orderedEntities}
+        assignments={board.assignments}
+        readOnly={isPresentationMode}
+        onAddPositionTask={handleAddPositionTask}
+        onTogglePositionTask={handleTogglePositionTask}
+        onRemovePositionTask={handleRemovePositionTask}
+        onUpdateAssignmentTask={handleUpdateAssignmentTask}
       />
 
       {selectedPerson && (
@@ -3668,6 +4178,17 @@ export default function App() {
               </div>
               <button type="button" onClick={() => setSelectedPersonId(null)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-900 hover:text-white">
                 <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => openTaskSummary(selectedPerson.id)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-300 transition-colors hover:bg-cyan-950/50"
+                title="Ver el resumen consolidado de puestos y funciones de esta persona en todo el Holding"
+              >
+                <ClipboardList className="h-3.5 w-3.5" />
+                Hoja de funciones
               </button>
             </div>
             {!isPresentationMode && (
@@ -4112,8 +4633,8 @@ export default function App() {
 
       {isPositionModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <form onSubmit={handleSavePosition} className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between">
+          <form onSubmit={handleSavePosition} className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
+            <div className="mb-5 flex shrink-0 items-center justify-between">
               <h2 className="font-display text-lg font-extrabold text-white">{editingPositionId ? 'Editar puesto' : 'Crear puesto'}</h2>
               <button
                 type="button"
@@ -4127,12 +4648,12 @@ export default function App() {
               </button>
             </div>
 
-            <p className="mb-4 text-xs text-slate-500">
+            <p className="mb-4 shrink-0 text-xs text-slate-500">
               Entidad: <strong className="text-slate-300">{getEntityName(positionEntityId)}</strong>. Puedes dejarlo vacante o asignar
               una persona directamente al guardar.
             </p>
 
-            <div className="grid gap-4">
+            <div className="grid gap-4 overflow-y-auto pr-1">
               <label className="text-xs font-bold text-slate-400">
                 Título del puesto
                 <input
@@ -4177,9 +4698,56 @@ export default function App() {
                   ))}
                 </select>
               </label>
+
+              <div>
+                <span className="text-xs font-bold text-slate-400">Funciones clave de este puesto</span>
+                <div className="mt-2 flex flex-col gap-1.5">
+                  {positionForm.tasks.length === 0 ? (
+                    <p className="text-[11px] text-slate-500">Sin funciones agregadas todavía.</p>
+                  ) : (
+                    positionForm.tasks.map((task, taskIndex) => (
+                      <div
+                        key={`${task}-${taskIndex}`}
+                        className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-1.5"
+                      >
+                        <span className="min-w-0 flex-1 break-words text-xs text-slate-200">{task}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeTaskFromPositionForm(taskIndex)}
+                          className="shrink-0 text-slate-500 opacity-70 hover:text-red-300 hover:opacity-100"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={positionTaskInput}
+                    onChange={(event) => setPositionTaskInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        addTaskToPositionForm();
+                      }
+                    }}
+                    placeholder="Ej: Cotizar seguros, Supervisar avance en terreno..."
+                    className="min-w-0 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={addTaskToPositionForm}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Agregar
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-5 flex shrink-0 justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
