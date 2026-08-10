@@ -1375,6 +1375,335 @@ function BankDrawer({
   );
 }
 
+interface MindMapModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  holdingMembers: HoldingMember[];
+  entitiesByLevel: Record<EntityType, BoardEntity[]>;
+  assignments: Assignment[];
+  people: Person[];
+}
+
+function MindMapModal({
+  isOpen,
+  onClose,
+  holdingMembers,
+  entitiesByLevel,
+  assignments,
+  people,
+}: MindMapModalProps) {
+  const [companyFilter, setCompanyFilter] = useState('all');
+  const [personFilter, setPersonFilter] = useState('all');
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  const owner = holdingMembers.find((member) => member.level === 0) || {
+    id: 'holding-owner',
+    level: 0,
+    name: 'Damir Solar',
+    role: 'Dueño',
+    notes: 'Radicado en el extranjero (10 meses al año)',
+  };
+
+  const advisor = holdingMembers.find((member) => member.level === 1) || {
+    id: 'holding-advisor',
+    level: 1,
+    name: 'Rafael Valenzuela Munita',
+    role: 'Asesor Financiero y del Directorio',
+    notes: 'Nexo principal para la toma de decisiones del Holding',
+  };
+
+  const peopleById = useMemo(() => new Map(people.map((person) => [person.id, person])), [people]);
+
+  const assignmentsByEntity = useMemo(() => {
+    const grouped = new Map<string, Assignment[]>();
+    assignments.forEach((assignment) => {
+      const entityAssignments = grouped.get(assignment.entityId) || [];
+      entityAssignments.push(assignment);
+      grouped.set(assignment.entityId, entityAssignments);
+    });
+    return grouped;
+  }, [assignments]);
+
+  const entityIdsByPerson = useMemo(() => {
+    const grouped = new Map<string, Set<string>>();
+    assignments.forEach((assignment) => {
+      const personEntities = grouped.get(assignment.personId) || new Set<string>();
+      personEntities.add(assignment.entityId);
+      grouped.set(assignment.personId, personEntities);
+    });
+    return grouped;
+  }, [assignments]);
+
+  const selectedCompanyPersonIds = useMemo(() => {
+    if (companyFilter === 'all') return null;
+    return new Set((assignmentsByEntity.get(companyFilter) || []).map((assignment) => assignment.personId));
+  }, [assignmentsByEntity, companyFilter]);
+
+  const visibleEntityIdsByCompany = useMemo(() => {
+    if (companyFilter === 'all' || !selectedCompanyPersonIds) return null;
+
+    const entityIds = new Set<string>([companyFilter]);
+    assignments.forEach((assignment) => {
+      if (selectedCompanyPersonIds.has(assignment.personId)) {
+        entityIds.add(assignment.entityId);
+      }
+    });
+    return entityIds;
+  }, [assignments, companyFilter, selectedCompanyPersonIds]);
+
+  const selectedPersonEntityIds = useMemo(() => {
+    if (personFilter === 'all') return null;
+    return entityIdsByPerson.get(personFilter) || new Set<string>();
+  }, [entityIdsByPerson, personFilter]);
+
+  const visibleEntitiesByLevel = useMemo(() => {
+    const grouped: Record<EntityType, BoardEntity[]> = { empresa: [], proyecto: [], licitacion: [], tarea: [] };
+    LEVEL_ORDER.forEach((levelType) => {
+      grouped[levelType] = entitiesByLevel[levelType].filter((entity) => !visibleEntityIdsByCompany || visibleEntityIdsByCompany.has(entity.id));
+    });
+    return grouped;
+  }, [entitiesByLevel, visibleEntityIdsByCompany]);
+
+  const selectedPerson = personFilter === 'all' ? null : peopleById.get(personFilter);
+
+  const getAssignedPeople = (entityId: string) =>
+    (assignmentsByEntity.get(entityId) || [])
+      .map((assignment) => ({ assignment, person: peopleById.get(assignment.personId) }))
+      .filter((entry): entry is { assignment: Assignment; person: Person } => Boolean(entry.person));
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[120] bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div className="flex h-full flex-col">
+        <header className="shrink-0 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95">
+          <div className="mx-auto flex max-w-[1800px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 p-2.5 shadow-lg shadow-cyan-500/10">
+                <Network className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="font-display text-lg font-extrabold text-slate-950 dark:text-white">Vista Mapa Mental</h2>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Cúpula, entidades y personas conectadas desde las asignaciones reales del tablero.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                Empresa
+                <select
+                  value={companyFilter}
+                  onChange={(event) => setCompanyFilter(event.target.value)}
+                  className="min-w-[180px] bg-transparent text-xs font-semibold text-slate-900 outline-none dark:text-slate-100"
+                >
+                  <option value="all" className="bg-white dark:bg-slate-950">Todas</option>
+                  {entitiesByLevel.empresa.map((entity) => (
+                    <option key={entity.id} value={entity.id} className="bg-white dark:bg-slate-950">
+                      {entity.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                Persona
+                <select
+                  value={personFilter}
+                  onChange={(event) => setPersonFilter(event.target.value)}
+                  className="min-w-[180px] bg-transparent text-xs font-semibold text-slate-900 outline-none dark:text-slate-100"
+                >
+                  <option value="all" className="bg-white dark:bg-slate-950">Todas</option>
+                  {people.map((person) => (
+                    <option key={person.id} value={person.id} className="bg-white dark:bg-slate-950">
+                      {person.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {(companyFilter !== 'all' || personFilter !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCompanyFilter('all');
+                    setPersonFilter('all');
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-700"
+                >
+                  Limpiar filtros
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 shadow-sm hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-white"
+                aria-label="Cerrar mapa mental"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-auto p-4 lg:p-6">
+          <div className="relative mx-auto min-h-[calc(100vh-9rem)] min-w-[1180px] max-w-[1800px] pb-8">
+            <svg
+              className="pointer-events-none absolute left-0 top-0 h-[520px] w-full text-slate-400 dark:text-cyan-300"
+              viewBox="0 0 1200 520"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <defs>
+                <marker id="mindmap-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
+                </marker>
+              </defs>
+              <path d="M600 74 C600 105 600 120 600 150" fill="none" stroke="currentColor" strokeWidth="2.5" markerEnd="url(#mindmap-arrow)" />
+              <path d="M600 220 C600 250 155 235 155 294" fill="none" stroke="currentColor" strokeWidth="2" markerEnd="url(#mindmap-arrow)" />
+              <path d="M600 220 C600 255 450 245 450 294" fill="none" stroke="currentColor" strokeWidth="2" markerEnd="url(#mindmap-arrow)" />
+              <path d="M600 220 C600 255 750 245 750 294" fill="none" stroke="currentColor" strokeWidth="2" markerEnd="url(#mindmap-arrow)" />
+              <path d="M600 220 C600 250 1045 235 1045 294" fill="none" stroke="currentColor" strokeWidth="2" markerEnd="url(#mindmap-arrow)" />
+            </svg>
+
+            <div className="relative z-10 flex flex-col items-center gap-4 pt-2">
+              <div className="w-[360px] rounded-xl border border-indigo-200 bg-white p-4 text-center shadow-lg dark:border-indigo-500/40 dark:bg-slate-900">
+                <div className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-300">Nivel 0 · Dirección</div>
+                <h3 className="mt-1 font-display text-base font-extrabold text-slate-950 dark:text-white">{owner.name}</h3>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{owner.role}</p>
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{owner.notes}</p>
+              </div>
+
+              <div className="w-[420px] rounded-xl border border-cyan-200 bg-white p-4 text-center shadow-lg dark:border-cyan-500/40 dark:bg-slate-900">
+                <div className="text-[10px] font-black uppercase tracking-wider text-cyan-700 dark:text-cyan-300">Nivel 1 · Nexo del Holding</div>
+                <h3 className="mt-1 font-display text-base font-extrabold text-slate-950 dark:text-white">{advisor.name}</h3>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{advisor.role}</p>
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{advisor.notes}</p>
+              </div>
+
+              {selectedPerson && (
+                <div className="rounded-full border border-amber-300 bg-amber-100 px-4 py-2 text-xs font-bold text-amber-900 shadow-sm dark:border-amber-500/50 dark:bg-amber-400/15 dark:text-amber-200">
+                  Red destacada: {selectedPerson.name}
+                </div>
+              )}
+            </div>
+
+            <div className="relative z-10 mt-12 grid grid-cols-4 gap-4">
+              {LEVEL_ORDER.map((levelType) => {
+                const levelMeta = LEVEL_META[levelType];
+                const LevelIcon = ENTITY_META[levelType].icon;
+                const levelEntities = visibleEntitiesByLevel[levelType];
+
+                return (
+                  <section key={levelType} className={`rounded-xl border ${levelMeta.border} ${levelMeta.bg} p-3 shadow-sm`}>
+                    <div className={`mb-3 flex items-center justify-between gap-2 rounded-lg border ${levelMeta.border} bg-white/70 px-3 py-2 dark:bg-slate-950/40`}>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <LevelIcon className={`h-4 w-4 shrink-0 ${levelMeta.text}`} />
+                        <h3 className={`truncate text-xs font-black uppercase tracking-wider ${levelMeta.text}`}>{levelMeta.title}</h3>
+                      </div>
+                      <span className={`rounded-full bg-white px-2 py-0.5 text-[10px] font-black ${levelMeta.text} dark:bg-slate-900`}>
+                        {levelEntities.length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {levelEntities.length === 0 ? (
+                        <p className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-4 text-center text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-500">
+                          Sin nodos visibles.
+                        </p>
+                      ) : (
+                        levelEntities.map((entity) => {
+                          const EntityIcon = ENTITY_META[entity.type].icon;
+                          const assignedPeople = getAssignedPeople(entity.id);
+                          const isSelectedPersonEntity = selectedPersonEntityIds?.has(entity.id) ?? false;
+                          const shouldDimEntity = Boolean(selectedPersonEntityIds) && !isSelectedPersonEntity;
+
+                          return (
+                            <article
+                              key={entity.id}
+                              className={`rounded-xl border bg-white p-3 shadow-sm transition dark:bg-slate-900 ${
+                                isSelectedPersonEntity
+                                  ? 'border-amber-400 ring-2 ring-amber-300/70 dark:ring-amber-300/30'
+                                  : 'border-slate-200 dark:border-slate-800'
+                              } ${shouldDimEntity ? 'opacity-45' : 'opacity-100'}`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className="rounded-lg bg-slate-100 p-2 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                  <EntityIcon className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    {entity.code && <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-slate-200">{entity.code}</span>}
+                                    <h4 className="truncate text-sm font-extrabold text-slate-950 dark:text-white">{entity.name}</h4>
+                                  </div>
+                                  {entity.client && <p className="mt-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{entity.client}</p>}
+                                  {entity.budgetUsd && <p className="mt-1 text-xs font-black text-emerald-700 dark:text-emerald-300">USD {entity.budgetUsd}</p>}
+                                  {entity.description && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{entity.description}</p>}
+                                </div>
+                              </div>
+
+                              <div className="mt-3 border-l-2 border-slate-200 pl-3 dark:border-slate-700">
+                                {assignedPeople.length === 0 ? (
+                                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">Sin personas asignadas.</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {assignedPeople.map(({ assignment, person }) => {
+                                      const isSelectedPerson = personFilter !== 'all' && person.id === personFilter;
+                                      const shouldDimPerson = personFilter !== 'all' && !isSelectedPerson;
+
+                                      return (
+                                        <button
+                                          key={assignment.id}
+                                          type="button"
+                                          onClick={() => setPersonFilter(person.id)}
+                                          className={`w-full rounded-lg border p-2 text-left transition hover:border-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 ${
+                                            isSelectedPerson
+                                              ? 'border-amber-400 bg-amber-50 ring-1 ring-amber-300 dark:bg-amber-400/10 dark:ring-amber-300/30'
+                                              : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/60'
+                                          } ${shouldDimPerson ? 'opacity-45' : 'opacity-100'}`}
+                                        >
+                                          <div className="flex items-start justify-between gap-2">
+                                            <span className="min-w-0 truncate text-xs font-extrabold text-slate-900 dark:text-slate-100">{person.name}</span>
+                                            <RoleBadge role={person.role} />
+                                          </div>
+                                          <PersonBadges person={person} limit={2} />
+                                          {assignment.taskText && (
+                                            <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{assignment.taskText}</p>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </article>
+                          );
+                        })
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [board, setBoard] = useState<BoardState>(loadState);
   const [theme, setTheme] = useState<ThemeMode>(loadTheme);
@@ -1393,6 +1722,7 @@ export default function App() {
   });
   const [connectionMode, setConnectionMode] = useState(false);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
+  const [isMindMapOpen, setIsMindMapOpen] = useState(false);
   const [selectedConnectionPersonId, setSelectedConnectionPersonId] = useState<string | null>(null);
   const [hoveredPersonId, setHoveredPersonId] = useState<string | null>(null);
   const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null);
@@ -2172,6 +2502,15 @@ export default function App() {
               </button>
               <button
                 type="button"
+                onClick={() => setIsMindMapOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
+                title="Abrir vista alternativa de mapa mental"
+              >
+                <Network className="h-3.5 w-3.5" />
+                Mapa Mental
+              </button>
+              <button
+                type="button"
                 onClick={() => setCompactMode((prev) => !prev)}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-300 transition-colors hover:border-slate-700"
               >
@@ -2496,6 +2835,15 @@ export default function App() {
         onDeletePerson={handleDeletePerson}
         onAssignPerson={handleAssignPersonToEntity}
         onOpenNewPerson={openNewPersonModal}
+      />
+
+      <MindMapModal
+        isOpen={isMindMapOpen}
+        onClose={() => setIsMindMapOpen(false)}
+        holdingMembers={board.holdingMembers}
+        entitiesByLevel={entitiesByLevel}
+        assignments={board.assignments}
+        people={board.people}
       />
 
       {selectedPerson && (
