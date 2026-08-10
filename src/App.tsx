@@ -715,7 +715,7 @@ function EntityColumn({
     <section
       ref={setNodeRef}
       style={columnStyle}
-      className={`flex h-[440px] flex-col overflow-hidden rounded-2xl border-2 bg-slate-900/45 backdrop-blur-md transition-all ${
+      className={`flex h-auto flex-col overflow-hidden rounded-2xl border-2 bg-slate-900/45 backdrop-blur-md transition-all ${
         fitMode ? 'w-full min-w-0' : 'w-[280px] min-w-[280px] shrink-0 snap-start'
       } ${isColumnDragging ? 'opacity-40' : 'opacity-100'} ${isOver ? 'border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.22)]' : 'border-slate-800/80'}`}
     >
@@ -787,9 +787,9 @@ function EntityColumn({
         </div>
       </header>
 
-      <div className={`flex-1 overflow-y-auto ${fitMode ? 'space-y-1.5 p-2' : 'space-y-2 p-2.5'}`}>
+      <div className={`overflow-visible ${fitMode ? 'space-y-1.5 p-2' : 'space-y-2 p-2.5'}`}>
         {assignments.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-800 p-6 text-center text-slate-500">
+          <div className="flex min-h-[100px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-800 p-6 text-center text-slate-500">
             <Users className="mb-2 h-8 w-8 opacity-25" />
             <p className="text-xs font-semibold">Arrastra personas aquí</p>
             <p className="mt-1 text-[10px] leading-relaxed">Se copian a esta columna sin salir de su origen.</p>
@@ -852,7 +852,7 @@ function BankColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`z-30 flex h-[440px] shrink-0 flex-col overflow-hidden rounded-2xl border-2 bg-slate-950/80 backdrop-blur-md transition-all ${
+      className={`z-30 flex h-auto shrink-0 flex-col overflow-hidden rounded-2xl border-2 bg-slate-950/80 backdrop-blur-md transition-all ${
         collapsed ? 'w-[56px] min-w-[56px]' : `min-w-[280px] w-[280px] ${dense ? '' : 'snap-start'}`
       } ${isOver ? 'border-red-400 shadow-[0_0_24px_rgba(248,113,113,0.24)]' : 'border-slate-800'}`}
     >
@@ -879,7 +879,7 @@ function BankColumn({
         </button>
       </header>
       {!collapsed && (
-        <div className="flex-1 space-y-2 overflow-y-auto p-2.5">
+        <div className="space-y-2 overflow-visible p-2.5">
           {people.map((person) => (
             <PersonCard
               key={person.id}
@@ -1028,6 +1028,7 @@ export default function App() {
   const [manualAssignEntityId, setManualAssignEntityId] = useState('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [connectionLines, setConnectionLines] = useState<ConnectionLine[]>([]);
+  const [connectionCanvasSize, setConnectionCanvasSize] = useState({ width: 0, height: 0 });
 
   const boardContentRef = useRef<HTMLDivElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -1199,6 +1200,11 @@ export default function App() {
   const refreshConnectionLines = useCallback(() => {
     const container = boardContentRef.current;
     if (!container) return;
+
+    // Columns now grow freely with their content (no internal scroll), so the SVG
+    // canvas must match the container's full rendered size — not just its visible
+    // viewport — for arrows to keep pointing at the right cards as rows expand.
+    setConnectionCanvasSize({ width: container.scrollWidth, height: container.scrollHeight });
 
     const containerRect = container.getBoundingClientRect();
     const nextLines = board.connections.flatMap((connection) => {
@@ -1888,7 +1894,10 @@ export default function App() {
 
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div ref={boardContentRef} className="relative flex flex-col gap-5 pb-5">
-            <svg className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible">
+            <svg
+              className="pointer-events-none absolute inset-0 z-20 overflow-visible"
+              style={{ width: connectionCanvasSize.width || '100%', height: connectionCanvasSize.height || '100%' }}
+            >
               <defs>
                 <marker id="arrow-head" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
                   <path d="M 0 0 L 8 4 L 0 8 z" fill={connectionColor} />
