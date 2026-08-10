@@ -88,6 +88,11 @@ interface BoardEntity {
   type: EntityType;
   name: string;
   description: string;
+  code?: string;
+  client?: string;
+  budgetUsd?: string;
+  closeDate?: string;
+  status?: string;
 }
 
 interface Assignment {
@@ -215,16 +220,118 @@ function getTagColorStyle(color: TagColorKey) {
   return TAG_COLOR_STYLES[color] || TAG_COLOR_STYLES.slate;
 }
 
+const JULY_LICITATION_ENTITIES: BoardEntity[] = [
+  {
+    id: 'lic-17-2026-ambulancias-combate',
+    type: 'licitacion',
+    code: '17-2026',
+    client: 'EJERCITO',
+    name: '[17-2026] Ambulancias de Combate - EJERCITO',
+    budgetUsd: 'USD 13.557.150',
+    closeDate: '07/08/2026',
+    status: 'Retiro DIVAE',
+    description: 'Presupuesto: USD 13.557.150 | Cierre: 07/08/2026 | Estado: Retiro DIVAE',
+  },
+  {
+    id: 'lic-21-2026-adquisicion-vehiculos',
+    type: 'licitacion',
+    code: '21-2026',
+    client: 'EJERCITO',
+    name: '[21-2026] Adquisicion de Vehiculos - EJERCITO',
+    budgetUsd: 'USD 4.197.166',
+    closeDate: '14/09/2026',
+    status: 'Por Email',
+    description: 'Presupuesto: USD 4.197.166 | Cierre: 14/09/2026 | Estado: Por Email',
+  },
+  {
+    id: 'lic-11-2025-municion-556-ss109',
+    type: 'licitacion',
+    code: '11-2025',
+    client: 'EJERCITO',
+    name: '[11-2025] Adq. Municion 5,56 SS109 - EJERCITO',
+    budgetUsd: 'USD 2.184.000',
+    closeDate: 'Contrato',
+    status: 'Fabricacion',
+    description: 'Presupuesto: USD 2.184.000 | Cierre: Contrato | Estado: Fabricacion',
+  },
+  {
+    id: 'lic-45-2024-cadenas-grupos-carpa',
+    type: 'licitacion',
+    code: '45-2024',
+    client: 'EJERCITO',
+    name: '[45-2024] Cadenas, Grupos Elec. y Carpa Sanidad - EJERCITO',
+    budgetUsd: 'USD 898.450',
+    closeDate: 'Esperando',
+    status: 'Prorroga CTO',
+    description: 'Presupuesto: USD 898.450 | Cierre: Esperando | Estado: Prorroga CTO',
+  },
+  {
+    id: 'lic-23-2026-kits-mantenimiento-vehiculos',
+    type: 'licitacion',
+    code: '23-2026',
+    client: 'EJERCITO',
+    name: '[23-2026] Kits Mantenimiento Vehiculos Campaña - EJERCITO',
+    budgetUsd: 'USD 414.242,84',
+    closeDate: '08/09/2026',
+    status: 'Por Email',
+    description: 'Presupuesto: USD 414.242,84 | Cierre: 08/09/2026 | Estado: Por Email',
+  },
+  {
+    id: 'lic-20-2026-kit-kim-f1',
+    type: 'licitacion',
+    code: '20-2026',
+    client: 'EJERCITO',
+    name: '[20-2026] Kit KIM F1 Tipo A y B - EJERCITO',
+    budgetUsd: 'USD 314.369,24',
+    closeDate: '25/08/2026',
+    status: 'Resp. por Email',
+    description: 'Presupuesto: USD 314.369,24 | Cierre: 25/08/2026 | Estado: Resp. por Email',
+  },
+  {
+    id: 'lic-19-2026-montana-lautaro-ii',
+    type: 'licitacion',
+    code: '19-2026',
+    client: 'EJERCITO',
+    name: '[19-2026] Equipamiento de Montaña "Lautaro II" - EJERCITO',
+    budgetUsd: 'USD 84.353',
+    closeDate: '05/08/2026',
+    status: 'Resp. por Email',
+    description: 'Presupuesto: USD 84.353 | Cierre: 05/08/2026 | Estado: Resp. por Email',
+  },
+  {
+    id: 'lic-1238177-arriendo-vehiculos-seguridad',
+    type: 'licitacion',
+    code: '1238177',
+    client: 'MUNI PROVIDENCIA',
+    name: '[1238177] Arriendo Vehiculos Seguridad - MUNI PROVIDENCIA',
+    closeDate: '07/08/2026',
+    status: 'Portal',
+    description: 'Cierre: 07/08/2026 | Estado: Portal',
+  },
+  {
+    id: 'lic-rfi-chalecos-antibalas-l5',
+    type: 'licitacion',
+    code: 'RFI',
+    client: 'CARABINEROS',
+    name: '[RFI] Chalecos Antibalas L5 - CARABINEROS',
+    closeDate: '24/07/2026',
+    status: 'Por Email',
+    description: 'Cierre: 24/07/2026 | Estado: Por Email',
+  },
+];
+
+const JULY_LICITATION_IDS = JULY_LICITATION_ENTITIES.map((entity) => entity.id);
+
 const INITIAL_STATE: BoardState = {
   entities: [
     { id: 'entity-cramick', type: 'empresa', name: 'Cramick S.A.', description: 'Licitaciones de defensa y logística militar.' },
     { id: 'entity-centurion', type: 'empresa', name: 'Centurion Armors SpA', description: 'Equipamiento táctico, blindaje y seguridad avanzada.' },
     { id: 'entity-bedrock', type: 'empresa', name: 'Bedrock S.A.', description: 'Servicios gastronómicos y operaciones de restauración.' },
     { id: 'entity-alpha', type: 'proyecto', name: 'Proyecto Alpha', description: 'Mesa horizontal para coordinación transversal.' },
-    { id: 'entity-ejercito', type: 'licitacion', name: 'Licitación Ejército', description: 'Seguimiento de requerimientos, responsables y reportes.' },
+    ...JULY_LICITATION_ENTITIES,
     { id: 'entity-nomina', type: 'tarea', name: 'Cierre de Nómina', description: 'Situaciones, notas y pendientes operativos.' },
   ],
-  entitiesOrder: ['entity-cramick', 'entity-centurion', 'entity-bedrock', 'entity-alpha', 'entity-ejercito', 'entity-nomina'],
+  entitiesOrder: ['entity-cramick', 'entity-centurion', 'entity-bedrock', 'entity-alpha', ...JULY_LICITATION_IDS, 'entity-nomina'],
   people: [
     { id: 'person-1', name: 'Javier Alonso Farfán Santibáñez', role: 'Arquitectura', category: 'ITO', email: 'j.farfan@cramick.cl', phone: '+56 9 8765 4321', notes: 'Asesor externo para proyectos de diseño.', skills: ['Diseño estructural', 'Revisión de planos'], customTags: [{ id: 'tag-1', label: 'ITO', color: 'cyan' }], supervisor: '' },
     { id: 'person-2', name: 'Carlos Amunátegui Bustos', role: 'Management', category: 'Producto', email: 'c.amunategui@cramick.cl', phone: '+56 9 1234 5678', notes: 'Lidera desarrollo de productos tácticos.', skills: ['Gestión de producto', 'Liderazgo de equipos'], customTags: [{ id: 'tag-2', label: 'Dirección', color: 'blue' }], supervisor: '' },
@@ -310,15 +417,27 @@ function normalizePerson(person: Partial<Person> & { id: string; name: string })
 // states keep working without losing data.
 function normalizeBoardState(state: BoardState): BoardState {
   const persistedOrder = Array.isArray(state.entitiesOrder) ? state.entitiesOrder : [];
-  const existingEntityIds = new Set(state.entities.map((entity) => entity.id));
+  const replacedLicitacionIds = new Set(['entity-ejercito', ...JULY_LICITATION_IDS]);
+  const entities = [
+    ...state.entities.filter((entity) => !replacedLicitacionIds.has(entity.id)),
+    ...JULY_LICITATION_ENTITIES,
+  ];
+  const existingEntityIds = new Set(entities.map((entity) => entity.id));
+  const orderWithoutReplacedLicitaciones = [
+    ...(persistedOrder.length > 0 ? persistedOrder : state.entities.map((entity) => entity.id)),
+  ].filter((entityId) => !replacedLicitacionIds.has(entityId) && existingEntityIds.has(entityId));
+  const taskIndex = orderWithoutReplacedLicitaciones.indexOf('entity-nomina');
   const normalizedOrder = [
-    ...persistedOrder.filter((entityId) => existingEntityIds.has(entityId)),
-    ...state.entities.map((entity) => entity.id).filter((entityId) => !persistedOrder.includes(entityId)),
+    ...(taskIndex >= 0 ? orderWithoutReplacedLicitaciones.slice(0, taskIndex) : orderWithoutReplacedLicitaciones),
+    ...JULY_LICITATION_IDS,
+    ...(taskIndex >= 0 ? orderWithoutReplacedLicitaciones.slice(taskIndex) : []),
   ];
 
   return {
     ...state,
+    entities,
     entitiesOrder: normalizedOrder,
+    assignments: state.assignments.filter((assignment) => assignment.entityId !== 'entity-ejercito'),
     people: state.people.map(normalizePerson),
     holdingMembers: Array.isArray(state.holdingMembers) && state.holdingMembers.length > 0
       ? state.holdingMembers
@@ -692,6 +811,30 @@ function AssignmentCard({
   );
 }
 
+function LicitationEntitySummary({ entity }: { entity: BoardEntity }) {
+  if (entity.type !== 'licitacion') return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {entity.code && (
+        <span className="rounded-md border border-white/25 bg-slate-950/40 px-2 py-0.5 text-[10px] font-extrabold text-white">
+          ID {entity.code}
+        </span>
+      )}
+      {entity.client && (
+        <span className="rounded-md border border-white/25 bg-slate-950/40 px-2 py-0.5 text-[10px] font-extrabold text-white">
+          {entity.client}
+        </span>
+      )}
+      {entity.budgetUsd && (
+        <span className="rounded-md border border-emerald-200/50 bg-emerald-950/45 px-2 py-0.5 text-[10px] font-extrabold text-emerald-100">
+          {entity.budgetUsd}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function EntityColumn({
   entity,
   assignments,
@@ -769,6 +912,7 @@ function EntityColumn({
               {meta.label}
             </span>
             <h3 className={`mt-2 break-words font-display font-extrabold leading-tight text-white ${fitMode ? 'text-sm' : 'text-lg'}`}>{entity.name}</h3>
+            <LicitationEntitySummary entity={entity} />
             {!fitMode && <p className="mt-1 line-clamp-2 min-h-[32px] text-xs leading-relaxed text-white/80">{entity.description}</p>}
           </div>
           <div className="flex flex-col items-end gap-2">
