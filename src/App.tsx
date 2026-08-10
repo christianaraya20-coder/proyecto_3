@@ -1125,10 +1125,35 @@ function PositionCard({
   const isVacant = !assignedPerson;
   const tasks = position.tasks || [];
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
+  const {
+    attributes: positionAttributes,
+    listeners: positionListeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isOver,
+  } = useSortable({
     id: `position:${position.id}`,
     data: { type: 'position', entityId, positionId: position.id },
     disabled: readOnly,
+  });
+  const {
+    attributes: personDragAttributes,
+    listeners: personDragListeners,
+    setNodeRef: setPersonDragRef,
+    transform: personDragTransform,
+    isDragging: isPersonDragging,
+  } = useDraggable({
+    id: `position-person:${position.id}`,
+    data: {
+      type: 'position-person',
+      personId: assignedPerson?.id,
+      entityId,
+      positionId: position.id,
+      fte: position.fte,
+    },
+    disabled: readOnly || !assignedPerson,
   });
 
   const [pickedPersonId, setPickedPersonId] = useState('');
@@ -1136,6 +1161,7 @@ function PositionCard({
   const [tasksOpen, setTasksOpen] = useState(false);
   const [newTaskText, setNewTaskText] = useState('');
   const style = transform ? { transform: CSS.Transform.toString(transform), transition } : { transition };
+  const personDragStyle = personDragTransform ? { transform: CSS.Transform.toString(personDragTransform) } : undefined;
   const assignedPersonId = assignedPerson?.id;
 
   const submitNewTask = () => {
@@ -1168,8 +1194,18 @@ function PositionCard({
           </div>
           {position.department && <p className="mt-0.5 truncate text-[10px] font-medium text-slate-500">{position.department}</p>}
           {assignedPerson && (
-            <div className="mt-1.5 flex min-w-0 items-center gap-2">
-              <p className="min-w-0 truncate text-xs font-bold text-slate-100">{assignedPerson.name}</p>
+            <div
+              ref={setPersonDragRef}
+              style={personDragStyle}
+              {...personDragAttributes}
+              {...personDragListeners}
+              className={`mt-1.5 flex min-w-0 cursor-grab items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/45 px-2 py-1 active:cursor-grabbing ${
+                isPersonDragging ? 'opacity-35' : 'opacity-100'
+              }`}
+              title="Arrastrar persona a otro puesto, entidad o Banco"
+            >
+              <GripVertical className="h-3 w-3 shrink-0 text-slate-500" />
+              <p className="min-w-0 flex-1 truncate text-xs font-bold text-slate-100">{assignedPerson.name}</p>
               <RoleBadge role={assignedPerson.role} />
             </div>
           )}
@@ -1337,8 +1373,8 @@ function PositionCard({
           </button>
           <button
             type="button"
-            {...attributes}
-            {...listeners}
+            {...positionAttributes}
+            {...positionListeners}
             className="rounded-lg border border-slate-700 bg-slate-950 p-1 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300 active:cursor-grabbing"
             title="Arrastrar puesto"
           >
@@ -1855,6 +1891,38 @@ function BankPersonEntry({
   );
 }
 
+function BankDropButton({
+  count,
+  onClick,
+  readOnly,
+}: {
+  count: number;
+  onClick: () => void;
+  readOnly: boolean;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'bank:header',
+    data: { type: 'bank' },
+    disabled: readOnly,
+  });
+
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold text-slate-200 shadow-md transition-colors ${
+        isOver ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-slate-800 bg-slate-900 hover:border-slate-700'
+      }`}
+      title="Abrir el banco de personas o soltar aquí para liberar un puesto"
+    >
+      <Users className="h-3.5 w-3.5" />
+      Banco de Personas
+      <span className="rounded-full bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-extrabold text-indigo-300">{count}</span>
+    </button>
+  );
+}
+
 function BankDrawer({
   isOpen,
   onClose,
@@ -1912,12 +1980,23 @@ function BankDrawer({
   onToggleBadges: (personId: string) => void;
   onOpenSummary: (personId: string) => void;
 }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'bank:drawer',
+    data: { type: 'bank' },
+    disabled: readOnly,
+  });
+
   if (!isOpen) return null;
 
   return (
     <>
       <div className="fixed inset-0 z-[75] bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
-      <aside className="fixed inset-y-0 left-0 z-[76] flex w-full max-w-md flex-col border-r border-slate-800 bg-slate-950/95 shadow-2xl backdrop-blur-xl">
+      <aside
+        ref={setNodeRef}
+        className={`fixed inset-y-0 left-0 z-[76] flex w-full max-w-md flex-col border-r bg-slate-950/95 shadow-2xl backdrop-blur-xl transition-colors ${
+          isOver ? 'border-amber-300 ring-2 ring-amber-300/40' : 'border-slate-800'
+        }`}
+      >
         <header className="shrink-0 border-b border-slate-800 p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -3280,6 +3359,115 @@ export default function App() {
     showToast(position ? `"${position.title}" quedó vacante.` : 'Puesto liberado.', 'info');
   };
 
+  const releasePersonFromPosition = (entityId: string, positionId: string, personId: string, removeEntityAssignment = false) => {
+    const entity = board.entities.find((candidate) => candidate.id === entityId);
+    const position = entity?.positions?.find((candidate) => candidate.id === positionId);
+    const person = board.people.find((candidate) => candidate.id === personId);
+    if (!entity || !position || !person || position.assignedPersonId !== personId) return false;
+
+    setBoard((prev) => ({
+      ...prev,
+      assignments: removeEntityAssignment
+        ? prev.assignments.filter((assignment) => !(assignment.entityId === entityId && assignment.personId === personId))
+        : prev.assignments,
+      entities: prev.entities.map((candidate) =>
+        candidate.id === entityId
+          ? {
+              ...candidate,
+              positions: (candidate.positions || []).map((p) =>
+                p.id === positionId ? { ...p, assignedPersonId: null } : p
+              ),
+            }
+          : candidate
+      ),
+    }));
+    showToast(`${person.name} liberado de "${position.title}".`, 'info');
+    return true;
+  };
+
+  const movePositionPersonToPosition = (
+    sourceEntityId: string,
+    sourcePositionId: string,
+    targetEntityId: string,
+    targetPositionId: string,
+    personId: string,
+    fte: number
+  ) => {
+    if (sourceEntityId === targetEntityId && sourcePositionId === targetPositionId) return false;
+
+    const sourceEntity = board.entities.find((entity) => entity.id === sourceEntityId);
+    const targetEntity = board.entities.find((entity) => entity.id === targetEntityId);
+    const sourcePosition = sourceEntity?.positions?.find((position) => position.id === sourcePositionId);
+    const targetPosition = targetEntity?.positions?.find((position) => position.id === targetPositionId);
+    const person = board.people.find((candidate) => candidate.id === personId);
+    if (!sourceEntity || !targetEntity || !sourcePosition || !targetPosition || !person) return false;
+
+    if (sourcePosition.assignedPersonId !== personId) return false;
+    if (targetPosition.assignedPersonId) {
+      showToast(`"${targetPosition.title}" ya está ocupado.`, 'warning');
+      return false;
+    }
+
+    setBoard((prev) => ({
+      ...prev,
+      assignments:
+        sourceEntityId !== targetEntityId
+          ? prev.assignments.filter((assignment) => !(assignment.entityId === sourceEntityId && assignment.personId === personId))
+          : prev.assignments,
+      entities: prev.entities.map((entity) => ({
+        ...entity,
+        positions: (entity.positions || []).map((position) => {
+          if (entity.id === sourceEntityId && position.id === sourcePositionId) {
+            return { ...position, assignedPersonId: null };
+          }
+          if (entity.id === targetEntityId && position.id === targetPositionId) {
+            return { ...position, assignedPersonId: personId, fte };
+          }
+          return position;
+        }),
+      })),
+    }));
+    showToast(`${person.name} movido a "${targetPosition.title}" (${formatFte(fte)} FTE).`, 'success');
+    return true;
+  };
+
+  const movePositionPersonToEntity = (sourceEntityId: string, sourcePositionId: string, targetEntityId: string, personId: string) => {
+    const sourceEntity = board.entities.find((entity) => entity.id === sourceEntityId);
+    const targetEntity = board.entities.find((entity) => entity.id === targetEntityId);
+    const sourcePosition = sourceEntity?.positions?.find((position) => position.id === sourcePositionId);
+    const person = board.people.find((candidate) => candidate.id === personId);
+    if (!sourceEntity || !targetEntity || !sourcePosition || !person || sourcePosition.assignedPersonId !== personId) return false;
+
+    setBoard((prev) => {
+      const withoutSourceAssignment =
+        sourceEntityId !== targetEntityId
+          ? prev.assignments.filter((assignment) => !(assignment.entityId === sourceEntityId && assignment.personId === personId))
+          : prev.assignments;
+      const alreadyAssigned = withoutSourceAssignment.some(
+        (assignment) => assignment.entityId === targetEntityId && assignment.personId === personId
+      );
+
+      return {
+        ...prev,
+        assignments: alreadyAssigned
+          ? withoutSourceAssignment
+          : [...withoutSourceAssignment, { id: createId('assign'), personId, entityId: targetEntityId, taskText: '' }],
+        entities: prev.entities.map((entity) =>
+          entity.id === sourceEntityId
+            ? {
+                ...entity,
+                positions: (entity.positions || []).map((position) =>
+                  position.id === sourcePositionId ? { ...position, assignedPersonId: null } : position
+                ),
+              }
+            : entity
+        ),
+      };
+    });
+    showToast(`${person.name} movido a ${targetEntity.name} sin puesto específico.`, 'success');
+    return true;
+  };
+
   // SSoT for a Position's task checklist — every add/toggle/remove funnels through
   // here so PositionCard's inline panel and the person's "Hoja de Funciones"
   // modal stay in sync.
@@ -3490,6 +3678,8 @@ export default function App() {
     const activeType = event.active.data.current?.type as string | undefined;
     const personId = event.active.data.current?.personId as string | undefined;
     const activeEntityId = event.active.data.current?.entityId as string | undefined;
+    const activePositionId = event.active.data.current?.positionId as string | undefined;
+    const activeFte = event.active.data.current?.fte as number | undefined;
     const overType = event.over?.data.current?.type as string | undefined;
     const overEntityId = event.over?.data.current?.entityId as string | undefined;
     const overId = String(event.over?.id || '');
@@ -3534,6 +3724,33 @@ export default function App() {
         reorderPositionsInEntity(activeEntityId, sourcePositionId, targetPositionId)
       ) {
         showToast('Orden interno de puestos actualizado.', 'success');
+      }
+      return;
+    }
+
+    if (overType === 'bank' && personId) {
+      if (activeType === 'position-person' && activeEntityId && activePositionId) {
+        releasePersonFromPosition(activeEntityId, activePositionId, personId, true);
+      } else if (activeType === 'assignment') {
+        const sourceAssignmentId = event.active.data.current?.assignmentId as string | undefined;
+        if (sourceAssignmentId) handleRemoveAssignment(sourceAssignmentId);
+      }
+      return;
+    }
+
+    if (activeType === 'position-person' && personId && activeEntityId && activePositionId) {
+      const targetPositionId = overId.startsWith('position:') ? overId.replace('position:', '') : '';
+      if (targetPositionId) {
+        const targetEntity = findEntityByPositionId(targetPositionId);
+        if (targetEntity) {
+          movePositionPersonToPosition(activeEntityId, activePositionId, targetEntity.id, targetPositionId, personId, activeFte || 1);
+        }
+        return;
+      }
+
+      const targetEntityId = overId.startsWith('entity:') ? overId.replace('entity:', '') : overEntityId || '';
+      if (targetEntityId) {
+        movePositionPersonToEntity(activeEntityId, activePositionId, targetEntityId, personId);
       }
       return;
     }
@@ -3686,6 +3903,7 @@ export default function App() {
         </div>
       )}
 
+      <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-4 py-4 lg:px-6">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
@@ -3708,16 +3926,11 @@ export default function App() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
+              <BankDropButton
+                count={board.people.length}
                 onClick={() => setIsBankDrawerOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-200 shadow-md transition-colors hover:border-slate-700"
-                title="Abrir el banco de personas"
-              >
-                <Users className="h-3.5 w-3.5" />
-                Banco de Personas
-                <span className="rounded-full bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-extrabold text-indigo-300">{board.people.length}</span>
-              </button>
+                readOnly={isPresentationMode}
+              />
               {!isPresentationMode && (
                 <button
                   type="button"
@@ -3938,7 +4151,6 @@ export default function App() {
           </div>
         )}
 
-        <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div ref={boardContentRef} className="relative flex flex-col gap-5 pb-5">
             <svg
               className="pointer-events-none absolute inset-0 z-20 overflow-visible"
@@ -4105,7 +4317,6 @@ export default function App() {
               </div>
             ) : null}
           </DragOverlay>
-        </DndContext>
       </main>
 
       <BankDrawer
@@ -4137,6 +4348,8 @@ export default function App() {
         onToggleBadges={handleTogglePersonBadges}
         onOpenSummary={openTaskSummary}
       />
+
+      </DndContext>
 
       <MindMapModal
         isOpen={isMindMapOpen}
